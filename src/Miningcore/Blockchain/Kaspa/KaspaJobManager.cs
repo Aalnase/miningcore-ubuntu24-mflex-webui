@@ -338,11 +338,11 @@ public class KaspaJobManager : JobManagerBase<KaspaJob>
                 if(customBlockHeaderHasher is not Sha3_256)
                     customBlockHeaderHasher = new Sha3_256();
 
-                if(customCoinbaseHasher is not Sha3_256)
-                    customCoinbaseHasher = new Sha3_256(Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseProofOfWorkHash));
+                if(customCoinbaseHasher is not CShake256)
+                    customCoinbaseHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseProofOfWorkHash));
 
-                if(customShareHasher is not Sha3_256)
-                    customShareHasher = new Sha3_256(Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseHeavyHash));
+                if(customShareHasher is not CShake256)
+                    customShareHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseHeavyHash));
 
                 return new WaglaylaJob(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher);
         }
