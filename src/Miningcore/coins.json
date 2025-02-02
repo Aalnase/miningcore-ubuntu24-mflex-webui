@@ -1634,11 +1634,11 @@
         "canonicalName": "Litecoin-Cash",
         "symbol": "LCC",
         "family": "bitcoin",
-        "website": "",
-        "market": "",
-        "twitter": "",
+        "website": "https://litecoinca.sh/",
+        "market": "https://coinpaprika.com/coin/lch-litecoincash",
+        "twitter": "https://twitter.com/litecoincash",
         "telegram": "",
-        "discord": "",
+        "discord": "https://discordapp.com/invite/F2nZXnW",
         "coinbaseHasher": {
             "hash": "sha256d"
         },
@@ -1657,6 +1657,34 @@
         "explorerTxLink": "https://chainz.cryptoid.info/lcc/tx.dws?{0}.htm",
         "explorerAccountLink": "https://chainz.cryptoid.info/lcc/address.dws?{0}.htm"
     },
+    "litecoin-cash-minotaurx": {
+        "name": "Litecoin Cash",
+        "canonicalName": "Litecoin-Cash",
+        "symbol": "LCC",
+        "family": "bitcoin",
+        "website": "https://litecoinca.sh/",
+        "market": "https://coinpaprika.com/coin/lch-litecoincash",
+        "twitter": "https://twitter.com/litecoincash",
+        "telegram": "",
+        "discord": "https://discordapp.com/invite/F2nZXnW",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "minotaurx"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://chainz.cryptoid.info/lcc/block.dws?$height$.htm",
+        "explorerTxLink": "https://chainz.cryptoid.info/lcc/tx.dws?{0}.htm",
+        "explorerAccountLink": "https://chainz.cryptoid.info/lcc/address.dws?{0}.htm"
+    },  
     "luckybit": {
         "name": "Lucky Bit",
         "symbol": "LUCKY",
