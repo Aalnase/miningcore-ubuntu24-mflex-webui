@@ -1697,16 +1697,44 @@
         "canonicalName": "Maza",
         "symbol": "MAZA",
         "family": "bitcoin",
-        "website": "",
-        "market": "",
-        "twitter": "",
-        "telegram": "",
-        "discord": "",
+        "website": "http://www.mazacoin.org/",
+        "market": "https://www.coingecko.com/en/coins/maza",
+        "twitter": "https://twitter.com/MazaCoin",
+        "telegram": "https://t.me/mazatribe",
+        "discord": "https://discord.com/invite/qzd9PnzN3v",
         "coinbaseHasher": {
             "hash": "sha256d"
         },
         "headerHasher": {
             "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://mazacha.in/block/$hash$",
+        "explorerTxLink": "https://mazacha.in/tx/{0}",
+        "explorerAccountLink": "https://mazacha.in/address/{0}"
+    },
+    "maza-minotaurx": {
+        "name": "Maza",
+        "canonicalName": "Mazacoin",
+        "symbol": "MAZA",
+        "family": "bitcoin",
+        "website": "http://www.mazacoin.org/",
+        "market": "https://www.coingecko.com/en/coins/maza",
+        "twitter": "https://twitter.com/MazaCoin",
+        "telegram": "https://t.me/mazatribe",
+        "discord": "https://discord.com/invite/qzd9PnzN3v",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "minotaurx"
         },
         "blockHasher": {
             "hash": "reverse",
