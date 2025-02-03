@@ -167,6 +167,11 @@ extern "C" MODULE_API void x15_export(const char* input, char* output, uint32_t 
 	x15_hash(input, output, input_len);
 }
 
+extern "C" MODULE_API void megabtx_export(const char* input, char* output, uint32_t input_len)
+{
+	megabtx_hash(input, output, input_len);
+}
+
 extern "C" MODULE_API void neoscrypt_export(const unsigned char* input, unsigned char* output, uint32_t profile)
 {
 	neoscrypt(input, output, profile);
