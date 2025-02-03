@@ -55,6 +55,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sha256dt.h"
 #include "hmq17.h"
 #include "phi.h"
+#include "phi2.h"
 #include "verthash/h2.h"
 #include "equi/equihashverify.h"
 #include "heavyhash/heavyhash.h"
@@ -134,6 +135,11 @@ extern "C" MODULE_API void hmq17_export(const char* input, char* output, uint32_
 extern "C" MODULE_API void phi_export(const char* input, char* output, uint32_t input_len)
 {
     phi_hash(input, output, input_len);
+}
+
+extern "C" MODULE_API void phi2_export(const char* input, char* output, uint32_t input_len)
+{
+    phi2_hash(input, output, input_len);
 }
 
 extern "C" MODULE_API void x11_export(const char* input, char* output, uint32_t input_len)

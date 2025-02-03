@@ -214,6 +214,7 @@
     <ClInclude Include="nist5.h" />
     <ClInclude Include="odocrypt.h" />
     <ClInclude Include="phi.h" />
+    <ClInclude Include="phi2.h" />
     <ClInclude Include="portable_endian.h" />
     <ClInclude Include="quark.h" />
     <ClInclude Include="qubit.h" />
@@ -364,6 +365,7 @@
     <ClCompile Include="exports.cpp" />
     <ClCompile Include="nist5.c" />
     <ClCompile Include="phi.c" />
+    <ClCompile Include="phi2.c" />
     <ClCompile Include="quark.c" />
     <ClCompile Include="qubit.c" />
     <ClCompile Include="s3.c" />
