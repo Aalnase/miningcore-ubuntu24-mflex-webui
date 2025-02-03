@@ -34,6 +34,8 @@ using Miningcore.Crypto.Hashing.Ethash.Ubqhash;
 using Miningcore.Crypto.Hashing.Progpow.Firopow;
 using Miningcore.Crypto.Hashing.Progpow.Kawpow;
 using Miningcore.Crypto.Hashing.Progpow.Meowpow;
+using Miningcore.Crypto.Hashing.Progpow.Meraki;
+using Miningcore.Crypto.Hashing.Progpow.Phihash;
 using Miningcore.Crypto.Hashing.Progpow.ProgpowZ;
 using Miningcore.Extensions;
 using Miningcore.Messaging;
@@ -834,6 +836,12 @@ public class Program : BackgroundService
 
         // Configure Meowpow
         Miningcore.Crypto.Hashing.Progpow.Meowpow.Cache.messageBus = messageBus;
+
+        // Configure Meraki
+        Miningcore.Crypto.Hashing.Progpow.Meraki.Cache.messageBus = messageBus;
+
+        // Configure Phihash
+        Miningcore.Crypto.Hashing.Progpow.Phihash.Cache.messageBus = messageBus;
 
         // Configure ProgpowZ
         Miningcore.Crypto.Hashing.Progpow.ProgpowZ.Cache.messageBus = messageBus;

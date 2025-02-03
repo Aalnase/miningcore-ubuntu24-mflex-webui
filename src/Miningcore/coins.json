@@ -2774,6 +2774,37 @@
         "explorerTxLink": "https://blockscan.realichain.org/tx/{0}",
         "explorerAccountLink": "https://blockscan.realichain.org/address/{0}"
     },
+    "phicoin": {
+        "name": "Phicoin",
+        "symbol": "PHI",
+        "family": "progpow",
+        "progpower": "phihash",
+        "website": "https://phicoin.net/",
+        "github": "https://github.com/PhicoinProject/phicoin",
+        "market": "",
+        "twitter": "https://x.com/PhicoinNet",
+        "telegram": "https://t.me/phicoin_official",
+        "discord": "https://discord.gg/phicoin",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "hasCommunityAddress": true,
+        "shareMultiplier": 1,
+        "explorerBlockLink": "https://explorer.phicoin.net/block/$hash$",
+        "explorerTxLink": "https://explorer.phicoin.net/tx/{0}",
+        "explorerAccountLink": "https://explorer.phicoin.net/address/{0}"
+    },
     "telestai": {
         "name": "Telestai",
         "symbol": "TLS",
