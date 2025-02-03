@@ -66,6 +66,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "shake/cshake.h"
 #include "shake/shake.h"
 #include "flex/flex.h"
+#include "megabtx.h"
 #include "xelishash/xelishash.hpp"
 
 #ifdef _WIN32
@@ -165,6 +166,11 @@ extern "C" MODULE_API void x17_export(const char* input, char* output, uint32_t 
 extern "C" MODULE_API void x15_export(const char* input, char* output, uint32_t input_len)
 {
 	x15_hash(input, output, input_len);
+}
+
+extern "C" MODULE_API void megabtx_export(const char* input, char* output, uint32_t input_len)
+{
+	megabtx_hash(input, output, input_len);
 }
 
 extern "C" MODULE_API void neoscrypt_export(const unsigned char* input, unsigned char* output, uint32_t profile)

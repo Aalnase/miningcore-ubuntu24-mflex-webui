@@ -461,6 +461,37 @@
         "explorerTxLink": "https://explorer.btcnickel.com/tx/{0}",
         "explorerAccountLink": "https://explorer.btcnickel.com/address/{0}"
     },
+    "bitcore": {
+        "name": "Bitcore",
+        "canonicalName": "Bitcore",
+        "symbol": "BTX",
+        "family": "bitcoin",
+        "website": "http://bitcore.cc/",
+        "market": "https://www.coingecko.com/en/coins/bitcore",
+        "twitter": "https://twitter.com/bitcore_btx",
+        "telegram": "",
+        "discord": "https://discordapp.com/invite/Q8uEjED",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "megabtx"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "hasMasterNodes": true,
+        "shareMultiplier": 256,
+        "coinbaseMinConfimations": 4032,
+        "explorerBlockLink": "https://chainz.cryptoid.info/btx/block.dws?$height$.htm",
+        "explorerTxLink": "https://chainz.cryptoid.info/btx/tx.dws?{0}.htm",
+        "explorerAccountLink": "https://chainz.cryptoid.info/btx/address.dws?{0}.htm"
+    },
     "bitflate": {
         "name": "Bitflate",
         "canonicalName": "Bitflate",
