@@ -2614,6 +2614,39 @@
         "explorerTxLink": "https://dogpu.cryptoscope.io/tx/?txid={0}",
         "explorerAccountLink": "https://dogpu.cryptoscope.io/address/?address={0}"
     },
+    "fewbit": {
+        "name": "FewBit",
+        "canonicalName": "FewBit",
+        "symbol": "FBIT",
+        "family": "bitcoin",
+        "website": "https://fewbit.net/",
+        "market": "",
+        "twitter": "",
+        "telegram": "https://t.me/+eMGB15LzvLk0MGZk",
+        "discord": "https://discord.gg/bwdsukjDyj",
+        "github": "https://github.com/FewBit-Coin/Core-Wallet",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "ghostrider"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "hasFounderFee": true,
+        "hasMasterNodes": true,
+        "hasSmartNodes": true,
+        "shareMultiplier": 65536,
+        "explorerBlockLink": "https://fewbit.online/block/$hash$",
+        "explorerTxLink": "https://fewbit.online/tx/{0}",
+        "explorerAccountLink": "https://fewbit.online/address/{0}"
+    },
     "ravencash": {
         "name": "Ravencash",
         "symbol": "RVH",
