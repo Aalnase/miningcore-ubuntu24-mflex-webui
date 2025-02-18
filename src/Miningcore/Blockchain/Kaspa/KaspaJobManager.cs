@@ -14,6 +14,7 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using Miningcore.Blockchain.Kaspa.Configuration;
 using Miningcore.Blockchain.Kaspa.Custom.Astrix;
+using Miningcore.Blockchain.Kaspa.Custom.Cryptix;
 using Miningcore.Blockchain.Kaspa.Custom.Karlsencoin;
 using Miningcore.Blockchain.Kaspa.Custom.Pyrin;
 using Miningcore.Blockchain.Kaspa.Custom.Spectre;
@@ -227,6 +228,14 @@ public class KaspaJobManager : JobManagerBase<KaspaJob>
                     customShareHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseHeavyHash));
 
                 return new AstrixJob(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher);
+            case "CYTX":
+                if(customBlockHeaderHasher is not Blake2b)
+                    customBlockHeaderHasher = new Blake2b(Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseBlockHash));
+                if(customCoinbaseHasher is not CShake256)
+                    customCoinbaseHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseProofOfWorkHash));
+                if(customShareHasher is not CShake256)
+                    customShareHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseHeavyHash));
+                return new CryptixJob(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher);   
             case "CAS":
             case "HTN":
                 if(customBlockHeaderHasher is not Blake3)
