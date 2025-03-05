@@ -714,6 +714,36 @@
         "explorerTxLink": "https://explorer.cpuchain.org/#/tx/{0}",
         "explorerAccountLink": "https://explorer.cpuchain.org/#/address/{0}"
     },
+    "dadarpay": {
+        "name": "Dadar Pay",
+        "symbol": "DDR",
+        "family": "bitcoin",
+        "website": "https://dadar.xyz/",
+        "github": "https://github.com/dadarpay/DDR",
+        "market": "https://exchange.spectra.cash/#/market/DEX.DDR_DEX.USDT",
+        "twitter": "https://x.com/CoinDadar",
+        "telegram": "",
+        "discord": "https://discord.gg/R32FTyKdXC",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "x11kvs"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "x11kvs"
+                }
+            ]
+        },
+        "hasMasterNodes": true,
+        "hasPayee": true,
+        "explorerBlockLink": "https://blocks.dadar.xyz/block/$hash$",
+        "explorerTxLink": "https://blocks.dadar.xyz/tx/{0}",
+        "explorerAccountLink": "https://blocks.dadar.xyz/address/{0}"
+    },
     "danecoin": {
         "name": "Danecoin",
         "canonicalName": "Danecoin",
