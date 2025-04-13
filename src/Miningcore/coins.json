@@ -4764,6 +4764,38 @@
         "explorerTxLink": "https://explorer.yerbas.org/tx/{0}",
         "explorerAccountLink": "https://explorer.yerbas.org/address/{0}"
     },
+    "zero-dynamics-cash": {
+        "name": "Zero Dynamics Cash",
+        "symbol": "0DYNC",
+        "family": "bitcoin",
+        "website": "http://zero-dynamics.org",
+        "market": "https://app.exbitron.com/exchange/?market=0DYNC-USDT",
+        "github": "https://github.com/Zero-Dynamics/cash-core",
+        "explorer": "http://154.92.17.70:3008/",
+        "twitter": "https://x.com/Zero_Dyn_",
+        "telegram": "https://t.me/Zero_Dynamics",
+        "discord": "https://discord.gg/4W8WfW9qje",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "argon2d1000"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "argon2d1000"
+                }
+            ]
+        },
+        "hasMasterNodes": true,
+        "shareMultiplier": 65536,
+        "coinbaseMinConfimations": 40,
+        "explorerBlockLink": "http://154.92.17.70:3008/block/$hash$",
+        "explorerTxLink": "http://154.92.17.70:3008/tx/{0}",
+        "explorerAccountLink": "http://154.92.17.70:3008/address/{0}"
+    },
     "zetacoin": {
         "name": "Zetacoin",
         "canonicalName": "Zetacoin",
