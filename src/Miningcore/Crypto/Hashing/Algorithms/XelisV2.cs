@@ -4,7 +4,7 @@ using Miningcore.Native;
 namespace Miningcore.Crypto.Hashing.Algorithms;
 
 [Identifier("xelisv2-pepew")]
-public unsafe class XelisV2_PEPEW : IHashAlgorithm
+public unsafe class XelisV2 : IHashAlgorithm
 {
     public void Digest(ReadOnlySpan<byte> data, Span<byte> result, params object[] extra)
     {
