@@ -2613,6 +2613,7 @@
         "family": "bitcoin",
         "website": "https://www.adventurecoin.quest/",
         "github": "https://github.com/AdventureCoin-ADVC/AdventureCoin",
+        "explorer": "http://178.156.175.223:8080/#/",
         "twitter": "https://x.com/AdventureCoinAD",
         "telegram": "https://t.me/AdventureCoinADVC",
         "discord": "https://discord.gg/xNJJXqKp3T",
@@ -2633,9 +2634,9 @@
         "hasDeveloper": true,
         "shareMultiplier": 65536,
         "coinbaseMinConfimations": 30,
-        "explorerBlockLink": "https://explorer.adventurecoin.quest/block/$hash$",
-        "explorerTxLink": "https://explorer.adventurecoin.quest/tx/{0}",
-        "explorerAccountLink": "https://explorer.adventurecoin.quest/address/{0}"
+        "explorerBlockLink": "http://178.156.175.223:8080/#/block/$hash$",
+        "explorerTxLink": "http://178.156.175.223:8080/#/transaction/{0}",
+        "explorerAccountLink": "http://178.156.175.223:8080/#/address/{0}"
     },
     "akitacoin": {
         "name": "Akitacoin",
