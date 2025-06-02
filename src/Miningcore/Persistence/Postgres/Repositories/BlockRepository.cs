@@ -118,25 +118,10 @@ public class BlockRepository : IBlockRepository
             .FirstOrDefault();
     }
 
-    public async Task<Block> GetMinerBlockBeforeAsync(IDbConnection con, string poolId, string miner, BlockStatus[] status, DateTime before, CancellationToken ct)
-    {
-        const string query = @"SELECT * FROM blocks WHERE poolid = @poolid AND miner = @miner AND status = ANY(@status) AND created < @before
-            ORDER BY created DESC FETCH NEXT 1 ROWS ONLY";
-        return (await con.QueryAsync<Entities.Block>(new CommandDefinition(query, new
-        {
-            poolId,
-            miner,
-            before,
-            status = status.Select(x => x.ToString().ToLower()).ToArray()
-        }, cancellationToken: ct)))
-            .Select(mapper.Map<Block>)
-            .FirstOrDefault();
-    }
-    
     public async Task<uint> GetBlockBeforeCountAsync(IDbConnection con, string poolId, BlockStatus[] status, DateTime before)
     {
         const string query = @"SELECT * FROM blocks WHERE poolid = @poolid AND status = ANY(@status) AND created < @before";
-        
+
         return await con.ExecuteScalarAsync<uint>(new CommandDefinition(query, new
         {
             poolId,
@@ -198,7 +183,7 @@ public class BlockRepository : IBlockRepository
         const string query = @"SELECT * FROM blocks WHERE poolid = @poolId AND blockheight = @height AND type = @type";
 
         return (await con.QueryAsync<Entities.Block>(query, new
-        { 
+        {
             poolId,
             height,
             type
@@ -206,11 +191,11 @@ public class BlockRepository : IBlockRepository
             .Select(mapper.Map<Block>)
             .FirstOrDefault();
     }
-    
+
     public async Task<uint> GetPoolDuplicateBlockCountByPoolHeightNoTypeAndStatusAsync(IDbConnection con, string poolId, long height, BlockStatus[] status)
     {
         const string query = @"SELECT COUNT(id) FROM blocks WHERE poolid = @poolId AND blockheight = @height AND status = ANY(@status)";
-        
+
         return await con.ExecuteScalarAsync<uint>(new CommandDefinition(query, new
         {
             poolId,
@@ -218,11 +203,11 @@ public class BlockRepository : IBlockRepository
             status = status.Select(x => x.ToString().ToLower()).ToArray()
         }));
     }
-    
+
     public async Task<uint> GetPoolDuplicateBlockBeforeCountByPoolHeightNoTypeAndStatusAsync(IDbConnection con, string poolId, long height, BlockStatus[] status, DateTime before)
     {
         const string query = @"SELECT COUNT(id) FROM blocks WHERE poolid = @poolId AND blockheight = @height AND status = ANY(@status) AND created < @before";
-        
+
         return await con.ExecuteScalarAsync<uint>(new CommandDefinition(query, new
         {
             poolId,
@@ -231,11 +216,11 @@ public class BlockRepository : IBlockRepository
             before
         }));
     }
-    
+
     public async Task<uint> GetPoolDuplicateBlockAfterCountByPoolHeightNoTypeAndStatusAsync(IDbConnection con, string poolId, long height, BlockStatus[] status, DateTime after)
     {
         const string query = @"SELECT COUNT(id) FROM blocks WHERE poolid = @poolId AND blockheight = @height AND status = ANY(@status) AND created > @after";
-        
+
         return await con.ExecuteScalarAsync<uint>(new CommandDefinition(query, new
         {
             poolId,
@@ -248,7 +233,7 @@ public class BlockRepository : IBlockRepository
     public async Task<uint> GetPoolDuplicateBlockBeforeCountByPoolHeightAndHashNoTypeAndStatusAsync(IDbConnection con, string poolId, long height, string hash, BlockStatus[] status, DateTime before)
     {
         const string query = @"SELECT COUNT(id) FROM blocks WHERE poolid = @poolId AND blockheight = @height AND hash = @hash AND status = ANY(@status) AND created < @before";
-        
+
         return await con.ExecuteScalarAsync<uint>(new CommandDefinition(query, new
         {
             poolId,
@@ -262,7 +247,7 @@ public class BlockRepository : IBlockRepository
     public async Task<uint> GetPoolDuplicateBlockAfterCountByPoolHeightAndHashNoTypeAndStatusAsync(IDbConnection con, string poolId, long height, string hash, BlockStatus[] status, DateTime after)
     {
         const string query = @"SELECT COUNT(id) FROM blocks WHERE poolid = @poolId AND blockheight = @height AND hash = @hash AND status = ANY(@status) AND created > @after";
-        
+
         return await con.ExecuteScalarAsync<uint>(new CommandDefinition(query, new
         {
             poolId,
