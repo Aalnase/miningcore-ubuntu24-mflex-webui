@@ -211,7 +211,7 @@ public class ProgpowJob : BitcoinJob
         {
             masterNodeParameters = BlockTemplate.Extra.SafeExtensionDataAs<MasterNodeBlockTemplateExtra>();
 
-            if(coin.Symbol == "FIRO" || coin.Symbol == "VORA")
+            if(coin.Symbol == "FIRO" || coin.Symbol == "KIIRO" || coin.Symbol == "REALI" || coin.Symbol == "VORA")
             {
                 if(masterNodeParameters.Extra?.ContainsKey("znode") == true)
                 {
