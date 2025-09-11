@@ -145,6 +145,7 @@ void power2b_hash(const char* input, char* output, uint32_t len);
 void yespowerMGPC_hash(const char* input, char* output, uint32_t len);
 void yespowerARWN_hash(const char* input, char* output, uint32_t len);
 void yespowerADVC_hash(const char* input, char* output, uint32_t len);
+void interchained_hash(const char* input, char* output, uint32_t len);
 
 #ifdef __cplusplus
 }
