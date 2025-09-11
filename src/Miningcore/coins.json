@@ -5040,6 +5040,38 @@
         "explorerTxLink": "https://chainz.cryptoid.info/zet/tx.dws?{0}.htm",
         "explorerAccountLink": "https://chainz.cryptoid.info/zet/address.dws?{0}.htm"
     },
+    "interchained": {
+        "name": "Interchained",
+        "canonicalName": "Interchained",
+        "bechPrefix": "itc",
+        "symbol": "ITC",
+        "family": "bitcoin",
+        "website": "https://interchained.org/",
+        "github": "https://github.com/interchained/interchained",
+        "explorer": "https://explorer.interchained.org/",
+        "twitter": "https://twitter.com/Interchained",
+        "telegram": "https://t.me/Interchained_ITC",
+        "discord": "https://discord.gg/vvVcN3F8M7",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "interchained"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "hasGovernanceAddress": true,
+        "shareMultiplier": 65536,
+        "explorerBlockLink": "https://explorer.interchained.org/block/$hash$",
+        "explorerTxLink": "https://explorer.interchained.org/tx/{0}",
+        "explorerAccountLink": "https://explorer.interchained.org/address/{0}"
+    },
     "bitcoin-gold": {
         "name": "Bitcoin Gold",
         "canonicalName": "Bitcoin Gold",
