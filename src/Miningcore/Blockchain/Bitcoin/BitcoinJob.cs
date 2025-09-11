@@ -362,6 +362,9 @@ public class BitcoinJob
         if(coin.HasFoundation)
             rewardToPool = CreateFoundationOutputs(tx, rewardToPool);
 
+        if(coin.HasGovernanceAddress)
+            rewardToPool = CreateGovernanceAddressOutputs(tx, rewardToPool);
+
         // Remaining amount goes to pool
         tx.Outputs.Add(rewardToPool, poolAddressDestination);
 
@@ -935,6 +938,21 @@ public class BitcoinJob
     }
 
     #endregion // Foundation
+
+    #region GovernanceAddress
+
+    protected virtual Money CreateGovernanceAddressOutputs(Transaction tx, Money reward)
+    {
+        if(BlockTemplate.GovernanceReward > 0)
+        {
+            var payeeReward = BlockTemplate.GovernanceReward;
+            var payeeAddress = BitcoinUtils.BechSegwitAddressToDestination(BlockTemplate.GovernanceAddress, network, coin?.BechPrefix);
+            tx.Outputs.Add(payeeReward, payeeAddress);
+            reward -= payeeReward;
+        }
+        return reward;
+    }
+    #endregion // GovernanceAddress
 
     #region API-Surface
 
