@@ -15,6 +15,7 @@ using Miningcore.Mining;
 using Miningcore.Persistence.Model;
 using Miningcore.Persistence.Model.Projections;
 using Miningcore.Persistence.Repositories;
+using Miningcore.Stratum;
 using Miningcore.Time;
 using NLog;
 
@@ -33,6 +34,7 @@ public class PoolApiController : ApiControllerBase
         paymentsRepo = ctx.Resolve<IPaymentRepository>();
         clock = ctx.Resolve<IMasterClock>();
         pools = ctx.Resolve<ConcurrentDictionary<string, IMiningPool>>();
+        workerTracker = ctx.ResolveOptional<IWorkerConnectionTracker>();
         adcp = _adcp;
     }
 
@@ -44,6 +46,7 @@ public class PoolApiController : ApiControllerBase
     private readonly IMasterClock clock;
     private readonly IActionDescriptorCollectionProvider adcp;
     private readonly ConcurrentDictionary<string, IMiningPool> pools;
+    private readonly IWorkerConnectionTracker workerTracker;
 
     private static readonly ILogger logger = LogManager.GetCurrentClassLogger();
 
@@ -94,6 +97,7 @@ public class PoolApiController : ApiControllerBase
                 var minersByHashrate = await cf.Run(con => statsRepo.PagePoolMinersByHashrateAsync(con, config.Id, from, 0, 15, ct));
 
                 result.TopMiners = minersByHashrate.Select(mapper.Map<MinerPerformanceStats>).ToArray();
+                result.LiveStats = BuildPoolLiveStats(config.Id);
 
                 return result;
             }).ToArray())
@@ -173,6 +177,41 @@ public class PoolApiController : ApiControllerBase
         response.Pool.TopMiners = (await cf.Run(con => statsRepo.PagePoolMinersByHashrateAsync(con, pool.Id, from, 0, 15, ct)))
             .Select(mapper.Map<MinerPerformanceStats>)
             .ToArray();
+
+        response.Pool.LiveStats = BuildPoolLiveStats(pool.Id);
+
+        return response;
+    }
+
+    [HttpGet("{poolId}/live")]
+    public ActionResult<Responses.PoolLiveStats> GetPoolLiveStats(string poolId)
+    {
+        _ = GetPool(poolId);
+        return BuildPoolLiveStats(poolId);
+    }
+
+    [HttpGet("{poolId}/connections")]
+    public ActionResult<Responses.PoolConnectionsResponse> GetPoolConnections(string poolId)
+    {
+        _ = GetPool(poolId);
+        var connections = GetPoolActiveConnections(poolId);
+
+        var response = new Responses.PoolConnectionsResponse
+        {
+            Summary = BuildPoolLiveStats(poolId),
+            Connections = connections
+                .OrderByDescending(x => x.LastActivity)
+                .ThenBy(x => x.Miner)
+                .ThenBy(x => x.Worker)
+                .Select(x => new Responses.LiveConnectionInfo
+                {
+                    Miner = x.Miner,
+                    Worker = x.Worker,
+                    Port = x.Port,
+                    LastActivity = x.LastActivity,
+                })
+                .ToArray(),
+        };
 
         return response;
     }
@@ -424,6 +463,11 @@ public class PoolApiController : ApiControllerBase
 
             stats.PerformanceSamples = await GetMinerPerformanceInternal(perfMode, pool, address, ct);
 
+            var liveStats = BuildMinerLiveStats(pool, address);
+            stats.LiveStats = liveStats;
+            AttachLiveMetadata(stats.Performance, liveStats);
+            AttachLiveMetadata(stats.PerformanceSamples, liveStats);
+
             // add total confirmed and pending blocks
             var totalConfirmedBlocks = await cf.Run(con => statsRepo.GetMinerTotalConfirmedBlocksAsync(con, pool.Id, address, ct));
             var totalPendingBlocks = await cf.Run(con => statsRepo.GetMinerTotalPendingBlocksAsync(con, pool.Id, address, ct));
@@ -432,6 +476,20 @@ public class PoolApiController : ApiControllerBase
         }
 
         return stats;
+    }
+
+    [HttpGet("{poolId}/miners/{address}/live")]
+    public ActionResult<Responses.MinerLiveStats> GetMinerLiveStats(string poolId, string address)
+    {
+        var pool = GetPool(poolId);
+
+        if(string.IsNullOrEmpty(address))
+            throw new ApiException("Invalid or missing miner address", HttpStatusCode.NotFound);
+
+        if(pool.Template.Family == CoinFamily.Ethereum)
+            address = address.ToLower();
+
+        return BuildMinerLiveStats(pool, address);
     }
 
     [HttpGet("{poolId}/miners/{address}/blocks")]
@@ -706,6 +764,8 @@ public class PoolApiController : ApiControllerBase
             address = address.ToLower();
 
         var result = await GetMinerPerformanceInternal(mode, pool, address, ct);
+        var liveStats = BuildMinerLiveStats(pool, address);
+        AttachLiveMetadata(result, liveStats);
 
         return result;
     }
@@ -828,5 +888,103 @@ public class PoolApiController : ApiControllerBase
         // map
         var result = mapper.Map<Responses.WorkerPerformanceStatsContainer[]>(stats);
         return result;
+    }
+
+    private WorkerConnectionInfo[] GetPoolActiveConnections(string poolId)
+    {
+        if(workerTracker == null)
+            return Array.Empty<WorkerConnectionInfo>();
+
+        return workerTracker.GetActiveConnections(poolId)?.ToArray() ?? Array.Empty<WorkerConnectionInfo>();
+    }
+
+    private Responses.PoolLiveStats BuildPoolLiveStats(string poolId)
+    {
+        var connections = GetPoolActiveConnections(poolId);
+
+        var ports = connections
+            .GroupBy(x => x.Port)
+            .Select(g => new Responses.LivePortStats
+            {
+                Port = g.Key,
+                Connections = g.Count(),
+                UniqueMiners = g.Select(x => x.Miner).Where(x => !string.IsNullOrEmpty(x)).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                UniqueWorkers = g.Where(x => !string.IsNullOrEmpty(x.Miner))
+                    .Select(x => $"{x.Miner}:{x.Worker}")
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count(),
+            })
+            .OrderBy(x => x.Port)
+            .ToArray();
+
+        return new Responses.PoolLiveStats
+        {
+            OnlineConnections = connections.Length,
+            OnlineMiners = connections.Select(x => x.Miner).Where(x => !string.IsNullOrEmpty(x)).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            OnlineWorkers = connections.Where(x => !string.IsNullOrEmpty(x.Miner))
+                .Select(x => $"{x.Miner}:{x.Worker}")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count(),
+            Ports = ports,
+        };
+    }
+
+    private Responses.MinerLiveStats BuildMinerLiveStats(PoolConfig pool, string address)
+    {
+        if(workerTracker == null)
+        {
+            return new Responses.MinerLiveStats
+            {
+                OnlineConnections = 0,
+                OnlineWorkers = 0,
+                Workers = new Dictionary<string, Responses.WorkerLiveStats>(),
+            };
+        }
+
+        var connections = GetPoolActiveConnections(pool.Id)
+            .Where(x => string.Equals(x.Miner, address, pool.Template.Family == CoinFamily.Ethereum ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            .ToArray();
+
+        var workers = connections
+            .GroupBy(x => x.Worker ?? string.Empty)
+            .ToDictionary(g => g.Key, g => new Responses.WorkerLiveStats
+            {
+                Online = true,
+                Connections = g.Count(),
+                Ports = g.Select(x => x.Port).Distinct().OrderBy(x => x).ToArray(),
+                LastActivity = g.Max(x => x.LastActivity),
+            });
+
+        return new Responses.MinerLiveStats
+        {
+            OnlineConnections = connections.Length,
+            OnlineWorkers = workers.Count,
+            Workers = workers,
+        };
+    }
+
+    private static void AttachLiveMetadata(Responses.WorkerPerformanceStatsContainer performance, Responses.MinerLiveStats liveStats)
+    {
+        if(performance?.Workers == null || liveStats?.Workers == null)
+            return;
+
+        foreach(var kv in liveStats.Workers)
+        {
+            if(!performance.Workers.TryGetValue(kv.Key, out var perf))
+            {
+                perf = new Responses.WorkerPerformanceStats();
+                performance.Workers[kv.Key] = perf;
+            }
+
+            perf.Live = kv.Value;
+        }
+    }
+
+    private static void AttachLiveMetadata(Responses.WorkerPerformanceStatsContainer[] samples, Responses.MinerLiveStats liveStats)
+    {
+        if(samples == null || samples.Length == 0)
+            return;
+
+        AttachLiveMetadata(samples[^1], liveStats);
     }
 }

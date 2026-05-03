@@ -36,6 +36,261 @@
         "explorerTxLink": "https://explorer.fiveg.cash/tx/{0}",
         "explorerAccountLink": "https://explorer.fiveg.cash/address/{0}"
     },
+    "fixedcoin": {
+        "name": "Fixedcoin",
+        "canonicalName": "Fixedcoin",
+        "symbol": "FIX",
+        "family": "bitcoin",
+        "website": "https://web.fixedcoin.org/",
+        "market": "",
+        "twitter": "https://x.com/FixedBlockchain",
+        "telegram": "https://t.me/fixedcoin10000",
+        "github": "https://github.com/Fixed-Blockchain/fixedcoin/releases/latest",
+        "discord": "https://discord.gg/e3rNt3JYSh",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://explorer.fixedcoin.org/block/$hash$",
+        "explorerTxLink": "https://explorer.fixedcoin.org/tx/{0}",
+        "explorerAccountLink": "https://explorer.fixedcoin.org/address/{0}"
+        },
+    "bch2": {
+        "name": "Bitcoincash II",
+        "canonicalName": "Bitcoincash II",
+        "symbol": "BCH2",
+        "family": "bitcoin",
+        "website": "https://bch2.org/",
+        "market": "",
+        "twitter": "https://x.com/BitcoincashII",
+        "telegram": "https://t.me/+NN61UINQ3hQwODlh",
+        "github": "https://github.com/BitcoincashII/bitcoincashII-core/releases/latest",
+        "discord": "https://discord.gg/reyXxgnc",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://explorer.bch2.org/block/$hash$",
+        "explorerTxLink": "https://explorer.bch2.org/tx/{0}",
+        "explorerAccountLink": "https://explorer.bch2.org/address/{0}"
+    },
+    "bc2": {
+        "name": "BitcoinII",
+        "canonicalName": "BitcoinII",
+        "symbol": "BC2",
+        "family": "bitcoin",
+        "website": "https://bitcoin-ii.org/",
+        "market": "",
+        "twitter": "https://x.com/TheBitcoinIIOrg",
+        "telegram": "https://t.me/BitcoinIIOrganization",
+        "github": "https://github.com/BitcoinII-Dev/BitcoinII/releases/latest",
+        "discord": "https://discord.gg/bitcoinii",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://bitcoinii.ddns.net/explorer/block-height/$hash$",
+        "explorerTxLink": "https://bitcoinii.ddns.net/explorer/tx/{0}",
+        "explorerAccountLink": "https://bitcoinii.ddns.net/explorer/address/{0}"
+    },
+    "bgcoin": {
+        "name": "Bgcoin",
+        "canonicalName": "Bgcoin",
+        "symbol": "BGCO",
+        "family": "bitcoin",
+        "website": "https://www.blackgoldcoin.org/",
+        "market": "",
+        "twitter": "https://x.com/BlackGold_Coin",
+        "telegram": "https://t.me/BlackGoldCoinCrypto",
+        "github": "https://github.com/BGCoinDev/bgcoin/releases/latest",
+        "discord": "https://discord.gg/93decYarZV",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://explorer.blackgoldcoin.org/block/$hash$",
+        "explorerTxLink": "https://explorer.blackgoldcoin.org/tx/{0}",
+        "explorerAccountLink": "https://explorer.blackgoldcoin.org/address/{0}"
+    },
+    "palladium": {
+    "name": "Palladium",
+    "canonicalName": "Palladium",
+    "symbol": "PLM",
+    "family": "bitcoin",
+    "website": "https://palladiumblockchain.net/",
+    "market": "",
+    "github": "https://github.com/palladium-coin/palladiumcore/releases/tag/v2.0.2",
+    "coinbaseHasher": {
+      "hash": "sha256d"
+    },
+    "headerHasher": {
+      "hash": "sha256d"
+    },
+    "blockHasher": {
+      "hash": "reverse",
+      "args": [
+        {
+          "hash": "sha256d"
+        }
+      ]
+    },
+    "explorerBlockLink": "https://explorer.palladium-coin.com/block/$hash$",
+    "explorerTxLink": "https://explorer.palladium-coin.com/tx/{0}",
+    "explorerAccountLink": "https://explorer.palladium-coin.com/address/{0}"
+  },
+    "bitcoin-silver": {
+    "name": "BitcoinSilver",
+    "canonicalName": "BitcoinSilver",
+    "symbol": "BTCS",
+    "family": "bitcoin",
+    "website": "https://bitcoinsilver.top/",
+    "market": "",
+    "github": "https://github.com/bitcoin-silver/core/releases/latest",
+    "coinbaseHasher": {
+      "hash": "sha256d"
+    },
+    "headerHasher": {
+      "hash": "sha256d"
+    },
+    "blockHasher": {
+      "hash": "reverse",
+      "args": [
+        {
+          "hash": "sha256d"
+        }
+      ]
+    },
+    "explorerBlockLink": "https://explorer.bitcoinsilver.top/block/$hash$",
+    "explorerTxLink": "https://explorer.bitcoinsilver.top/tx/{0}",
+    "explorerAccountLink": "https://explorer.bitcoinsilver.top/address/{0}"
+    },
+    "multiflex": {
+        "name": "Multiflex",
+        "canonicalName": "Multiflex",
+        "symbol": "MFLEX",
+        "family": "bitcoin",
+        "website": "https://multiflexcoin.com/",
+        "market": "",
+        "twitter": "",
+        "telegram": "",
+        "github": "https://github.com/Aalnase/multiflexcoin/releases/latest",
+        "discord": "",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://explorer.multiflexcoin.com/block/$hash$",
+        "explorerTxLink": "https://explorer.multiflexcoin.com/tx/{0}",
+        "explorerAccountLink": "https://explorer.multiflexcoin.com/address/{0}"
+    },
+    "mytherra": {
+        "name": "Mytherra",
+        "canonicalName": "Mytherra",
+        "symbol": "MYT",
+        "family": "bitcoin",
+        "website": "https://www.mytherrablockchain.org/",
+        "market": "",
+        "twitter": "https://x.com/Mytherra",
+        "telegram": "https://t.me/Mytherra_Blockchain",
+        "github": "https://github.com/MYTHERRA/Mytherra-source/releases/latest",
+        "discord": "https://discord.gg/zn3MzkmXhQ",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://explorer.mytherrablockchain.org/block/$hash$",
+        "explorerTxLink": "https://explorer.mytherrablockchain.org/tx/{0}",
+        "explorerAccountLink": "https://explorer.mytherrablockchain.org/address/{0}"
+    },
+    "hypercoin": {
+        "name": "Hypercoin",
+        "canonicalName": "Hypercoin",
+        "symbol": "HRC",
+        "family": "bitcoin",
+        "website": "https://hypercoin.network/",
+        "market": "",
+        "twitter": "https://x.com/Hypercoin_HRC",
+        "telegram": "https://t.me/Hypercoin_HRC",
+        "github": "https://github.com/Hypercoin-PRJ/hypercoin/releases/latest",
+        "discord": "https://discord.gg/q8W5rD6kcF",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://explorer.hypercoin.network/block-height/$hash$",
+        "explorerTxLink": "https://explorer.hypercoin.network/tx/{0}",
+        "explorerAccountLink": "https://explorer.hypercoin.network/address/{0}"
+    },
     "argoneum": {
         "name": "Argoneum",
         "symbol": "AGM",

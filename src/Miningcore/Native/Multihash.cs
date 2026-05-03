@@ -262,6 +262,10 @@ public static unsafe class Multihash
     [DllImport("libmultihash", EntryPoint = "xelis_hash_v2_export", CallingConvention = CallingConvention.Cdecl)]
     public static extern void xelishashv2(byte* input, void* output, uint inputLength);
 
+    [DllImport("libxelishashv3", EntryPoint = "xelishashv3")]
+    public static extern void xelishashv3(byte* input, byte* output, uint inputLength);
+
+
     [DllImport("libmultihash", EntryPoint = "xelisv2_pepew_export", CallingConvention = CallingConvention.Cdecl)]
     public static extern void xelisv2_pepew(byte* input, void* output, uint inputLength);
 

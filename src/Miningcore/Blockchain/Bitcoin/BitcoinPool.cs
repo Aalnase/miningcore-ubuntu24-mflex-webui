@@ -1,4 +1,7 @@
 using System.Globalization;
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
@@ -41,6 +44,92 @@ public class BitcoinPool : PoolBase
 
     protected object currentJobParams;
     protected BitcoinJobManager manager;
+
+// Multiflex / PoL cache per (height, tagHex)
+private readonly ConcurrentDictionary<string, long> polAllowedCache = new();
+
+private bool mflexEnabled;
+
+// Multiflex / PoL is opt-in per pool via pool-config "extra".
+// Supported shapes:
+//   { "mflexEnabled": true }
+//   { "mflex": { "enabled": true } }
+//   { "polEnabled": true }
+//   { "pol": { "enabled": true } }
+private static bool ReadMflexEnabled(object extraObj)
+{
+    try
+    {
+        if(extraObj == null)
+            return false;
+
+        var extra = extraObj as JToken ?? JToken.FromObject(extraObj);
+
+        var tok = extra.SelectToken("mflex.enabled") ??
+                  extra.SelectToken("mflexEnabled") ??
+                  extra.SelectToken("pol.enabled") ??
+                  extra.SelectToken("polEnabled");
+
+        if(tok == null)
+            return false;
+
+        return tok.Type switch
+        {
+            JTokenType.Boolean => tok.Value<bool>(),
+            JTokenType.Integer => tok.Value<long>() != 0,
+            JTokenType.String => bool.TryParse(tok.Value<string>(), out var b) && b,
+            _ => false,
+        };
+    }
+    catch
+    {
+        return false;
+    }
+}
+
+private long? GetPolAllowedSubsidySatsCached(int height, string tagHex)
+{
+    if(!mflexEnabled)
+        return null;
+
+    var key = $"{height}:{tagHex}";
+
+    if(polAllowedCache.TryGetValue(key, out var cached))
+        return cached;
+
+    try
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var allowedOpt = manager.TryGetPolAllowedTagSubsidyAsync(tagHex, height, cts.Token)
+            .GetAwaiter()
+            .GetResult();
+
+        if(allowedOpt.HasValue)
+        {
+            polAllowedCache[key] = allowedOpt.Value;
+            return allowedOpt.Value;
+        }
+    }
+    catch(Exception ex)
+    {
+        logger.Warn(ex, () => $"[PoL] getpolallowedtag RPC failed height={height} tag={tagHex}");
+    }
+
+    return null;
+}
+
+private static byte[] Tag12FromAddress(string address)
+{
+    if(string.IsNullOrEmpty(address))
+        address = "unknown";
+
+    var hash = SHA256.HashData(Encoding.UTF8.GetBytes(address));
+    var tag = new byte[12];
+    Buffer.BlockCopy(hash, 0, tag, 0, 12);
+    return tag;
+}
+
     private BitcoinTemplate coin;
 
     protected virtual async Task OnSubscribeAsync(StratumConnection connection, Timestamped<JsonRpcRequest> tsRequest)
@@ -141,6 +230,8 @@ public class BitcoinPool : PoolBase
             // log association
             logger.Info(() => $"[{connection.ConnectionId}] Authorized worker {workerValue}");
 
+            connection.SetIdentity(context.Miner, context.Worker);
+
             // extract control vars from password
             var staticDiff = GetStaticDiffFromPassparts(passParts);
 			var startDiff = GetStartDiffFromPassparts(passParts);
@@ -165,6 +256,18 @@ public class BitcoinPool : PoolBase
                 await connection.NotifyAsync(BitcoinStratumMethods.SetDifficulty, new object[] { context.Difficulty });
             }
 
+            if(mflexEnabled)
+            {
+                // Replace the generic pre-authorize job with a miner-specific Multiflex / PoL job
+                lock(context)
+                {
+                    context.validJobs.Clear();
+                }
+
+                var minerJobParams = CreateWorkerJob(connection, true);
+                if(minerJobParams != null)
+                    await connection.NotifyAsync(BitcoinStratumMethods.MiningNotify, minerJobParams);
+            }
         }
 
         else
@@ -183,19 +286,90 @@ public class BitcoinPool : PoolBase
         }
     }
 
-    private object CreateWorkerJob(StratumConnection connection, bool cleanJob)
-    {
-        var context = connection.ContextAs<BitcoinWorkerContext>();
-        var job = manager.GetJobForStratum();
+private object CreateWorkerJob(StratumConnection connection, bool cleanJob)
+{
+    var context = connection.ContextAs<BitcoinWorkerContext>();
+    var baseJob = manager.GetJobForStratum();
 
-        // update context
+    if(baseJob == null)
+        return null;
+
+    // Before authorize, or when Multiflex / PoL is disabled, keep vanilla Miningcore behavior.
+    if(!mflexEnabled || !context.IsAuthorized || string.IsNullOrEmpty(context.Miner))
+    {
         lock(context)
         {
-            context.AddJob(job, manager.maxActiveJobs);
+            context.AddJob(baseJob, manager.maxActiveJobs);
         }
 
-        return job.GetJobParams(cleanJob);
+        return baseJob.GetJobParams(cleanJob);
     }
+
+    var tag12 = Tag12FromAddress(context.Miner);
+    var tagHex = tag12.ToHexString();
+
+    long deltaSats = 0;
+
+    try
+    {
+        if(baseJob.BlockTemplate != null)
+        {
+            var height = (int) baseJob.BlockTemplate.Height;
+            var coinbaseValue = baseJob.BlockTemplate.CoinbaseValue;
+
+            var allowedOpt = GetPolAllowedSubsidySatsCached(height, tagHex);
+
+            if(allowedOpt.HasValue)
+            {
+                deltaSats = allowedOpt.Value - coinbaseValue;
+            }
+            else
+            {
+                // Fail closed: use 50% of the current coinbase value until the daemon answers again.
+                var fallbackTarget = coinbaseValue / 2;
+                deltaSats = fallbackTarget - coinbaseValue;
+
+                logger.Warn(() => $"[PoL] getpolallowedtag unavailable height={height} tag={tagHex}. " +
+                                  $"Falling back to 50% coinbasevalue to avoid bad-cb-pol. " +
+                                  $"coinbasevalue={coinbaseValue} fallback={fallbackTarget} delta={deltaSats}");
+            }
+        }
+    }
+    catch(Exception ex)
+    {
+        if(baseJob.BlockTemplate != null)
+        {
+            var coinbaseValue = baseJob.BlockTemplate.CoinbaseValue;
+            var fallbackTarget = coinbaseValue / 2;
+            deltaSats = fallbackTarget - coinbaseValue;
+        }
+
+        logger.Error(ex, () => $"[PoL] Exception while computing PoL delta. Using 50% coinbase fallback. tag={tagHex}");
+    }
+
+    var job = baseJob.CloneWithMflexIdTag(tag12, deltaSats);
+
+    lock(context)
+    {
+        // Avoid multiple job objects with the same JobId. BitcoinWorkerContext resolves jobs by JobId
+        // and returns the first match, so we must replace older variants of the same job.
+        if(context.validJobs.Count > 0)
+        {
+            var keep = context.validJobs
+                .Where(x => x.JobId != job.JobId)
+                .ToArray();
+
+            context.validJobs.Clear();
+
+            foreach(var existing in keep)
+                context.validJobs.Enqueue(existing);
+        }
+
+        context.AddJob(job, manager.maxActiveJobs);
+    }
+
+    return job.GetJobParams(cleanJob);
+}
 
     protected virtual async Task OnSubmitAsync(StratumConnection connection, Timestamped<JsonRpcRequest> tsRequest, CancellationToken ct)
     {
@@ -439,6 +613,8 @@ public class BitcoinPool : PoolBase
         coin = pc.Template.As<BitcoinTemplate>();
 
         base.Configure(pc, cc);
+
+        mflexEnabled = ReadMflexEnabled(pc.Extra);
     }
 
     protected override async Task SetupJobManager(CancellationToken ct)
@@ -530,6 +706,7 @@ public class BitcoinPool : PoolBase
                     }
 
                     await connection.RespondAsync(response);
+                    connection.MarkExtranonceSubscribed();
                     break;
 
                 case BitcoinStratumMethods.GetTransactions:

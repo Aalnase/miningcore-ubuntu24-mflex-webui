@@ -1088,6 +1088,75 @@ public class BitcoinJob
         };
     }
 
+
+// Multiflex / PoL:
+// Add an OP_RETURN output with "MFLEXID" + tag and adjust the pool payout output by deltaSats.
+// This keeps the coinbase total consistent while putting the miner tag on-chain.
+private byte[] BuildCoinbaseFinalWithMflexId(byte[] tag, long deltaSats)
+{
+    if(tag == null || (tag.Length != 4 && tag.Length != 8 && tag.Length != 12))
+        return coinbaseFinal;
+
+    var tx = txOut.Clone();
+
+    // The pool payout is the last positive-value output ("remainder to pool").
+    var poolOutIndex = -1;
+    for(var i = tx.Outputs.Count - 1; i >= 0; i--)
+    {
+        if(tx.Outputs[i].Value > Money.Zero)
+        {
+            poolOutIndex = i;
+            break;
+        }
+    }
+
+    if(poolOutIndex >= 0 && deltaSats != 0)
+    {
+        var current = tx.Outputs[poolOutIndex].Value.Satoshi;
+        var next = current + deltaSats;
+
+        if(next < 0)
+            next = 0;
+
+        tx.Outputs[poolOutIndex].Value = Money.Satoshis(next);
+    }
+
+    var marker = Encoding.ASCII.GetBytes("MFLEXID");
+    var payload = new byte[marker.Length + tag.Length];
+    Buffer.BlockCopy(marker, 0, payload, 0, marker.Length);
+    Buffer.BlockCopy(tag, 0, payload, marker.Length, tag.Length);
+
+    var script = TxNullDataTemplate.Instance.GenerateScriptPubKey(payload);
+    tx.Outputs.Add(Money.Zero, script);
+
+    using var stream = new MemoryStream();
+    var bs = new BitcoinStream(stream, true);
+
+    bs.ReadWrite(scriptSigFinalBytes);
+    bs.ReadWrite(ref txInSequence);
+
+    var txOutBytes = SerializeOutputTransaction(tx);
+    bs.ReadWrite(txOutBytes);
+
+    bs.ReadWrite(ref txLockTime);
+
+    return stream.ToArray();
+}
+
+public BitcoinJob CloneWithMflexIdTag(byte[] tag, long deltaSats = 0)
+{
+    var clone = (BitcoinJob) MemberwiseClone();
+
+    // Per-worker job params must not overwrite the shared base job
+    clone.jobParams = (object[]) jobParams.Clone();
+
+    clone.coinbaseFinal = clone.BuildCoinbaseFinalWithMflexId(tag, deltaSats);
+    clone.coinbaseFinalHex = clone.coinbaseFinal.ToHexString();
+    clone.jobParams[3] = clone.coinbaseFinalHex;
+
+    return clone;
+}
+
     public object GetJobParams(bool isNew)
     {
         jobParams[^1] = isNew;

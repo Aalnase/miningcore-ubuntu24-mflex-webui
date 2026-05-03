@@ -153,8 +153,10 @@ public abstract class StratumServer
             if (DisconnectIfBanned(socket, remoteEndpoint))
                 return;
 
+            var workerTracker = ctx.Resolve<IWorkerConnectionTracker>();
+
             // init connection
-            var connection = new StratumConnection(logger, rmsm, clock, CorrelationIdGenerator.GetNextId(), clusterConfig.Logging.GPDRCompliant);
+            var connection = new StratumConnection(logger, rmsm, clock, CorrelationIdGenerator.GetNextId(), clusterConfig.Logging.GPDRCompliant, poolConfig.Id, port.IPEndPoint.Port, workerTracker);
 
             logger.Info(() => $"[{connection.ConnectionId}] Accepting connection from {remoteEndpoint.Address.CensorOrReturn(clusterConfig.Logging.GPDRCompliant)}:{remoteEndpoint.Port} ...");
 
@@ -294,21 +296,26 @@ public abstract class StratumServer
 
     private X509Certificate2 GetTlsCert(StratumEndpoint port)
     {
-        if(!port.PoolEndpoint.Tls)
-            return null;
-
-        if(!certs.TryGetValue(port.PoolEndpoint.TlsPfxFile, out var cert))
+        lock(certs)
         {
-            cert = Guard(()=> new X509Certificate2(port.PoolEndpoint.TlsPfxFile, port.PoolEndpoint.TlsPfxPassword), ex =>
+            if(port.PoolEndpoint.Tls)
             {
-                logger.Info(() => $"Failed to load TLS certificate {port.PoolEndpoint.TlsPfxFile}: {ex.Message}");
-                throw ex;
-            });
+                if(!certs.TryGetValue(port.PoolEndpoint.TlsPfxFile, out var cert))
+                {
+                    cert = Guard(()=> new X509Certificate2(port.PoolEndpoint.TlsPfxFile, port.PoolEndpoint.TlsPfxPassword), ex =>
+                    {
+                        logger.Info(() => $"Failed to load TLS certificate {port.PoolEndpoint.TlsPfxFile}: {ex.Message}");
+                        throw ex;
+                    });
 
-            certs[port.PoolEndpoint.TlsPfxFile] = cert;
+                    certs.TryAdd(port.PoolEndpoint.TlsPfxFile, cert);
+                }
+
+                return cert;
+            }
+            else
+                return null;
         }
-
-        return cert;
     }
 
     private bool DisconnectIfBanned(Socket socket, IPEndPoint remoteEndpoint)

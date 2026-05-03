@@ -39,6 +39,20 @@ public class ZanoWorkerContext : WorkerContextBase
 
     public ZanoWorkerJob GetJob(string jobId)
     {
-        return validJobs.ToArray().FirstOrDefault(x => x.Id == jobId);
+        // Important: use the newest matching job, not the oldest.
+        //
+        // Some ZANO / EthProxy-style miners can receive multiple jobs with the
+        // same job id around block changes, VarDiff updates or duplicate job
+        // pushes. Returning the oldest match makes valid current submissions
+        // look like stale work and causes "block expired" rejects.
+        var jobs = validJobs.ToArray();
+
+        for(var i = jobs.Length - 1; i >= 0; i--)
+        {
+            if(jobs[i].Id == jobId)
+                return jobs[i];
+        }
+
+        return null;
     }
 }

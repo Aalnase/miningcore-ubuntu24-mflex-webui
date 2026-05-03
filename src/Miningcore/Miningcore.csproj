@@ -149,4 +149,17 @@
             <ContentWithTargetPath Include="@(Libs->'%(FullPath)')" RelativePath="%(Libs.Identity)" TargetPath="%(Libs.Filename)%(Libs.Extension)" CopyToPublishDirectory="PreserveNewest" />
         </ItemGroup>
     </Target>
+
+  <Target Name="BuildXelisHashV3Native" BeforeTargets="Publish">
+    <Exec Command="cmake -S &quot;$(MSBuildProjectDirectory)/../Native/libxelishashv3&quot; -B &quot;$(MSBuildProjectDirectory)/../Native/libxelishashv3/build&quot; -DCMAKE_BUILD_TYPE=Release" />
+    <Exec Command="cmake --build &quot;$(MSBuildProjectDirectory)/../Native/libxelishashv3/build&quot; --parallel" />
+  </Target>
+
+  <Target Name="CopyXelisHashV3Native" AfterTargets="Publish">
+    <Copy
+      SourceFiles="$(MSBuildProjectDirectory)/../Native/libxelishashv3/build/libxelishashv3.so"
+      DestinationFolder="$(PublishDir)"
+      SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

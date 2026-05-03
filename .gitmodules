@@ -1,0 +1,3 @@
+[submodule "external/xelis-hash"]
+	path = external/xelis-hash
+	url = https://github.com/xelis-project/xelis-hash.git

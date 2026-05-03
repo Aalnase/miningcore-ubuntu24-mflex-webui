@@ -147,11 +147,17 @@ public class ZanoJobManager : JobManagerBase<ZanoJob>
         if(info != null)
         {
             var lowestHeight = info.Height;
+            var totalBlocks = info.TargetHeight > 0 ? info.TargetHeight : info.MaxNetSeenHeight;
 
-            var totalBlocks = info.TargetHeight;
-            var percent = (double) lowestHeight / totalBlocks * 100;
-
-            logger.Info(() => $"Daemon has downloaded {percent:0.00}% of blockchain from {info.OutgoingConnectionsCount} peers");
+            if(totalBlocks > 0)
+            {
+                var percent = Math.Min(100.0d, (double) lowestHeight / totalBlocks * 100);
+                logger.Info(() => $"Daemon has downloaded {percent:0.00}% of blockchain from {info.OutgoingConnectionsCount} peers ({lowestHeight}/{totalBlocks})");
+            }
+            else
+            {
+                logger.Info(() => $"Daemon sync progress: height {lowestHeight}, target height unavailable, peers {info.OutgoingConnectionsCount}, status {info.Status}");
+            }
         }
     }
 

@@ -65,9 +65,18 @@ public class XelisJobManager : JobManagerBase<XelisJob>
 
         var getBlockHeaderResponse = await rpc.ExecuteAsync<GetBlockHeaderResponse>(logger, XelisCommands.GetBlockHeader, ct, getBlockHeaderRequest);
 
-        var getBlockTemplateRequest = new GetBlockTemplateRequest
+        
+        if(getBlockHeaderResponse?.Error != null ||
+           getBlockHeaderResponse?.Response == null ||
+           string.IsNullOrEmpty(getBlockHeaderResponse.Response.Template))
         {
-            BlockHeader = getBlockHeaderResponse?.Response.Template,
+            logger.Debug(() => $"'{XelisCommands.GetBlockHeader}' returned no usable template");
+            return (getBlockHeaderResponse, null);
+        }
+
+var getBlockTemplateRequest = new GetBlockTemplateRequest
+        {
+            BlockHeader = getBlockHeaderResponse?.Response?.Template,
             Address = poolConfig.Address
         };
 
@@ -81,11 +90,17 @@ public class XelisJobManager : JobManagerBase<XelisJob>
         try
         {
             var (responseBlockHeader, responseBlockTemplate) = await GetBlockTemplateAsync(ct);
-            if(responseBlockHeader.Error != null || responseBlockTemplate.Error != null)
+            if(responseBlockHeader?.Error != null ||
+               responseBlockTemplate?.Error != null ||
+               responseBlockHeader?.Response == null ||
+               responseBlockTemplate?.Response == null)
                 return false;
 
             var blockHeader = responseBlockHeader.Response;
             var blockTemplate = responseBlockTemplate.Response;
+
+            if(string.IsNullOrEmpty(blockTemplate.Template))
+                return false;
             var job = currentJob;
 
             logger.Debug(() => $" blockHeader.TopoHeight [{blockHeader.TopoHeight}] || blockTemplate.Difficulty [{blockTemplate.Difficulty}]] || blockTemplate.Template [{blockTemplate.Template}]");

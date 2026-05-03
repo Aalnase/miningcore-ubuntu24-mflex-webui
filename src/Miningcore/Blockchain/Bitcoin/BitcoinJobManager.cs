@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NLog;
 using Org.BouncyCastle.Crypto.Parameters;
+using System.Globalization;
 
 namespace Miningcore.Blockchain.Bitcoin;
 
@@ -30,6 +31,47 @@ public class BitcoinJobManager : BitcoinJobManagerBase<BitcoinJob>
     }
 
     private BitcoinTemplate coin;
+
+
+// Multiflex / PoL is opt-in per pool via pool-config "extra".
+// Supported shapes:
+//   { "mflexEnabled": true }
+//   { "mflex": { "enabled": true } }
+//   { "polEnabled": true }
+//   { "pol": { "enabled": true } }
+private bool mflexEnabled;
+
+private static bool ReadMflexEnabled(object extraObj)
+{
+    try
+    {
+        if(extraObj == null)
+            return false;
+
+        var extra = extraObj as JToken ?? JToken.FromObject(extraObj);
+
+        var tok = extra.SelectToken("mflex.enabled") ??
+                  extra.SelectToken("mflexEnabled") ??
+                  extra.SelectToken("pol.enabled") ??
+                  extra.SelectToken("polEnabled");
+
+        if(tok == null)
+            return false;
+
+        return tok.Type switch
+        {
+            JTokenType.Boolean => tok.Value<bool>(),
+            JTokenType.Integer => tok.Value<long>() != 0,
+            JTokenType.String => bool.TryParse(tok.Value<string>(), out var b) && b,
+            _ => false,
+        };
+    }
+    catch
+    {
+        return false;
+    }
+}
+
 
     protected override object[] GetBlockTemplateParams()
     {
@@ -224,6 +266,7 @@ public class BitcoinJobManager : BitcoinJobManagerBase<BitcoinJob>
     public override void Configure(PoolConfig pc, ClusterConfig cc)
     {
         coin = pc.Template.As<BitcoinTemplate>();
+        mflexEnabled = ReadMflexEnabled(pc.Extra);
         extraPoolConfig = pc.Extra.SafeExtensionDataAs<BitcoinPoolConfigExtra>();
         extraPoolPaymentProcessingConfig = pc.PaymentProcessing?.Extra?.SafeExtensionDataAs<BitcoinPoolPaymentProcessingConfigExtra>();
 
@@ -332,4 +375,39 @@ public class BitcoinJobManager : BitcoinJobManagerBase<BitcoinJob>
     public double ShareMultiplier => coin.ShareMultiplier;
 
     #endregion // API-Surface
+
+public async Task<long?> TryGetPolAllowedTagSubsidyAsync(string tagHex, int height, CancellationToken ct)
+{
+    if(!mflexEnabled || string.IsNullOrEmpty(tagHex))
+        return null;
+
+    try
+    {
+        var resp = await rpc.ExecuteAsync<JObject>(logger, "getpolallowedtag", ct,
+            new object[] { tagHex, height.ToString(CultureInfo.InvariantCulture) });
+
+        // Some daemons accept height only as a numeric RPC argument
+        if(resp.Error != null)
+        {
+            resp = await rpc.ExecuteAsync<JObject>(logger, "getpolallowedtag", ct,
+                new object[] { tagHex, height });
+        }
+
+        if(resp.Error != null || resp.Response == null)
+            return null;
+
+        if(resp.Response["allowed_subsidy"] != null)
+            return resp.Response["allowed_subsidy"]!.Value<long>();
+
+        if(resp.Response["allowed_subsidy_sats"] != null)
+            return resp.Response["allowed_subsidy_sats"]!.Value<long>();
+    }
+    catch
+    {
+        // ignored
+    }
+
+    return null;
+}
+
 }

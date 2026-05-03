@@ -213,3 +213,70 @@ fabric.properties
 /*/*/*/*/*/*/*/*/*.o
 /*/*/*/*/*/*/*/*/*/*.o
 /*/*/*/*/*/*/*/*/*/*.o
+
+# Runtime/build artifacts
+build/
+build.new/
+build.prev*/
+*.bak
+*.log
+*.tar.gz
+*.zip
+
+# Runtime configs and secrets
+config.json
+*.wallet
+*.wallet.*
+*.keys
+.rpcpass
+.rpcuser
+.wallet_pass
+.wallet_rpc_pass
+.api_key
+
+# Mining runtime files
+verthash.dat
+dag-zano/
+**/dag-zano/
+
+# Backups and dumps
+mbck/
+*.sql
+*.dump
+
+# Runtime/build artifacts
+build/
+build.new/
+build.test/
+build.prev*/
+*.bak
+*.log
+*.tar.gz
+*.zip
+
+# Runtime configs and secrets
+config.json
+*.wallet
+*.wallet.*
+*.keys
+.rpcpass
+.rpcuser
+.wallet_pass
+.wallet_rpc_pass
+.api_key
+
+# Mining runtime files
+verthash.dat
+dag-zano/
+**/dag-zano/
+
+# Backups and dumps
+mbck/
+*.sql
+*.dump
+
+# Native build outputs
+src/Native/libxelishashv3/build/
+libxelishashv3.so
+**/libxelishashv3.so
+*.o

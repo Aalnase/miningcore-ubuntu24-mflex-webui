@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Miningcore.Api.Responses;
 
 public class MinerPerformanceStats
@@ -11,6 +13,9 @@ public class WorkerPerformanceStats
 {
     public double Hashrate { get; set; }
     public double SharesPerSecond { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WorkerLiveStats Live { get; set; }
 }
 
 public class WorkerPerformanceStatsContainer
@@ -30,6 +35,10 @@ public class MinerStats
     public string LastPaymentLink { get; set; }
     public WorkerPerformanceStatsContainer Performance { get; set; }
     public WorkerPerformanceStatsContainer[] PerformanceSamples { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MinerLiveStats LiveStats { get; set; }
+
     public long TotalConfirmedBlocks { get; set; }
     public long TotalPendingBlocks { get; set; }
 }

@@ -85,6 +85,9 @@ public partial class PoolInfo
     public decimal BlockReward { get; set; }
     public DateTime? LastPoolBlockTime { get; set; }
     public double PoolEffort { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PoolLiveStats LiveStats { get; set; }
 }
 
 public class GetPoolsResponse

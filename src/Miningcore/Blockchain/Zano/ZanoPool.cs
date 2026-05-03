@@ -706,6 +706,39 @@ public class ZanoPool : PoolBase
         return Interlocked.Increment(ref currentJobId).ToString(CultureInfo.InvariantCulture);
     }
 
+
+    /// <summary>
+    /// Protocol V1 / EthProxy-compatible job push.
+    /// Keeps the legacy xiaolin result-push and additionally sends a JSON-RPC 2.0
+    /// response-like push with id=0. TT-Miner/ZANO appears to require this format
+    /// for follow-up jobs after block changes.
+    /// </summary>
+    private async Task SendHybridEthProxyV1JobAsync(StratumConnection connection, ZanoWorkerContext context, object[] job)
+    {
+        // Existing xiaolin/OpenEthereum-style push.
+        var legacy = new JsonRpcResponse<object[]>(job);
+
+        if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+        {
+            legacy.Extra = new Dictionary<string, object>();
+            legacy.Extra["error"] = null;
+        }
+
+        await connection.RespondAsync(legacy);
+
+        // Additional canonical JSON-RPC 2.0 response-like push.
+        var ethProxy = new JsonRpcResponse<object[]>(job, 0);
+        ethProxy.Extra = new Dictionary<string, object>
+        {
+            ["jsonrpc"] = "2.0"
+        };
+
+        if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+            ethProxy.Extra["error"] = null;
+
+        await connection.RespondAsync(ethProxy);
+    }
+
     private async Task OnNewJobAsync()
     {
         logger.Info(() => "Broadcasting jobs");
@@ -719,19 +752,7 @@ public class ZanoPool : PoolBase
             switch(context.ProtocolVersion)
             {
                 case 1:
-                    // Nicehash's stupid validator insists on "error" property present
-                    // in successful responses which is a violation of the JSON-RPC spec
-                    // [Respect the goddamn standards Nicehack :(]
-                    var response = new JsonRpcResponse<object[]>(job);
-
-                    if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
-                    {
-                        response.Extra = new Dictionary<string, object>();
-                        response.Extra["error"] = null;
-                    }
-
-                    // notify
-                    await connection.RespondAsync(response);
+                    await SendHybridEthProxyV1JobAsync(connection, context, job);
                     break;
 
                 case 2:

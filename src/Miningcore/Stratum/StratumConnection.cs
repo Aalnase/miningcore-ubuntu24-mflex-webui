@@ -28,6 +28,11 @@ namespace Miningcore.Stratum;
 public class StratumConnection
 {
     public StratumConnection(ILogger logger, RecyclableMemoryStreamManager rmsm, IMasterClock clock, string connectionId, bool gpdrCompliantLogging)
+        : this(logger, rmsm, clock, connectionId, gpdrCompliantLogging, string.Empty, 0, null)
+    {
+    }
+
+    public StratumConnection(ILogger logger, RecyclableMemoryStreamManager rmsm, IMasterClock clock, string connectionId, bool gpdrCompliantLogging, string poolId, int poolPort, IWorkerConnectionTracker workerTracker)
     {
         this.logger = logger;
         this.rmsm = rmsm;
@@ -43,6 +48,12 @@ public class StratumConnection
         ConnectionId = connectionId;
         IsAlive = true;
         this.gpdrCompliantLogging = gpdrCompliantLogging;
+
+        this.poolId = poolId;
+        this.poolPort = poolPort;
+        this.workerTracker = workerTracker;
+
+        workerTracker?.RegisterConnection(poolId, connectionId, poolPort);
     }
 
     private readonly ILogger logger;
@@ -67,6 +78,25 @@ public class StratumConnection
 
     private const int SendQueueCapacity = 16;
     private static readonly TimeSpan sendTimeout = TimeSpan.FromMilliseconds(5000);
+
+    private readonly IWorkerConnectionTracker workerTracker;
+    private readonly string poolId;
+    private readonly int poolPort;
+
+    public string Miner { get; private set; } = string.Empty;
+    public string Worker { get; private set; } = string.Empty;
+
+    public bool ExtranonceSubscribed { get; private set; } = false;
+
+    public void MarkExtranonceSubscribed()
+    {
+        ExtranonceSubscribed = true;
+    }
+
+    public Task SendSetExtranonceAsync(string extraNonce1Hex, int extraNonce2Size)
+    {
+        return NotifyAsync("mining.set_extranonce", new object[] { extraNonce1Hex, extraNonce2Size });
+    }
 
     #region API-Surface
 
@@ -160,6 +190,8 @@ public class StratumConnection
             IsAlive = false;
             terminated.OnNext(Unit.Default);
 
+            workerTracker?.UnregisterConnection(poolId, ConnectionId);
+
             logger.Info(() => $"[{ConnectionId}] Connection closed");
         }
     }
@@ -180,6 +212,14 @@ public class StratumConnection
     public T ContextAs<T>() where T : WorkerContextBase
     {
         return (T) context;
+    }
+
+    public void SetIdentity(string miner, string worker)
+    {
+        Miner = miner ?? string.Empty;
+        Worker = worker ?? string.Empty;
+
+        workerTracker?.SetIdentity(poolId, ConnectionId, Miner, Worker);
     }
 
     public Task RespondAsync<T>(T payload, object id)
@@ -246,6 +286,8 @@ public class StratumConnection
             logger.Debug(() => $"[{ConnectionId}] [NET] Received data: {Encoding.GetString(memory.Slice(0, cb).Span)}");
 
             LastReceive = clock.Now;
+
+            workerTracker?.UpdateActivity(poolId, ConnectionId);
 
             // hand off to pipe
             receivePipe.Writer.Advance(cb);
@@ -373,15 +415,78 @@ public class StratumConnection
         Func<StratumConnection, JsonRpcRequest, CancellationToken, Task> onRequestAsync,
         ReadOnlySequence<byte> lineBuffer)
     {
-        await using var stream = rmsm.GetStream(nameof(StratumConnection), lineBuffer.ToSpan()) as RecyclableMemoryStream;
-        using var reader = new JsonTextReader(new StreamReader(stream!, Encoding));
+        var raw = lineBuffer.ToArray();
 
-        var request = serializer.Deserialize<JsonRpcRequest>(reader);
+        int start = 0;
+        int end = raw.Length;
+        while(start < end)
+        {
+            var b = raw[start];
+            if(b == 0 || b == (byte) '\r' || b == (byte) '\n' || b == (byte) ' ' || b == (byte) '\t')
+                start++;
+            else
+                break;
+        }
+        while(end > start)
+        {
+            var b = raw[end - 1];
+            if(b == 0 || b == (byte) '\r' || b == (byte) '\n' || b == (byte) ' ' || b == (byte) '\t')
+                end--;
+            else
+                break;
+        }
 
-        if(request == null)
-            throw new JsonException("Unable to deserialize request");
+        if(end <= start)
+            return;
 
-        await onRequestAsync(this, request, ct);
+        byte[] sanitized;
+        {
+            int count = 0;
+            for(int i = start; i < end; i++)
+            {
+                if(raw[i] != 0)
+                    count++;
+            }
+
+            if(count == (end - start))
+            {
+                sanitized = new byte[end - start];
+                Buffer.BlockCopy(raw, start, sanitized, 0, sanitized.Length);
+            }
+            else
+            {
+                sanitized = new byte[count];
+                int o = 0;
+                for(int i = start; i < end; i++)
+                {
+                    var b = raw[i];
+                    if(b != 0)
+                        sanitized[o++] = b;
+                }
+            }
+        }
+
+        try
+        {
+            await using var stream = rmsm.GetStream(nameof(StratumConnection), sanitized, 0, sanitized.Length) as RecyclableMemoryStream;
+            using var reader = new JsonTextReader(new StreamReader(stream!, Encoding));
+
+            var request = serializer.Deserialize<JsonRpcRequest>(reader);
+
+            if(request == null)
+                throw new JsonException("Unable to deserialize request");
+
+            await onRequestAsync(this, request, ct);
+        }
+        catch(JsonException ex)
+        {
+            var preview = Encoding.GetString(sanitized);
+            if(preview.Length > 256)
+                preview = preview.Substring(0, 256) + "...";
+
+            logger.Error(() => $"[{ConnectionId}] Connection json error: {ex.Message}. Raw={preview}");
+            throw;
+        }
     }
 
     /// <summary>

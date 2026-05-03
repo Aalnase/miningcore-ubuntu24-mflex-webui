@@ -16,6 +16,19 @@ public class GetInfoResponse
     public uint TargetHeight { get; set; }
 
     /// <summary>
+    /// Maximum blockchain height observed in the network by this node.
+    /// Newer Zano versions expose this instead of target_height.
+    /// </summary>
+    [JsonProperty("max_net_seen_height")]
+    public uint MaxNetSeenHeight { get; set; }
+
+    /// <summary>
+    /// Current daemon network state.
+    /// </summary>
+    [JsonProperty("daemon_network_state")]
+    public int DaemonNetworkState { get; set; }
+
+    /// <summary>
     /// States if the node is on the testnet(true) or mainnet(false).
     /// </summary>
     [JsonProperty("testnet")]

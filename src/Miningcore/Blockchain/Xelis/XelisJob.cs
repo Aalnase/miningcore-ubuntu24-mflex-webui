@@ -24,6 +24,7 @@ public class XelisJob
     protected readonly IHashAlgorithm blake3Hasher = new Blake3IHash();
     protected readonly IHashAlgorithm xelisHash = new XelisHash();
     protected readonly IHashAlgorithm xelisHashV2 = new XelisHashV2();
+    protected readonly IHashAlgorithm xelisHashV3 = new XelisHashV3();
 
     protected readonly ConcurrentDictionary<string, bool> submissions = new(StringComparer.OrdinalIgnoreCase);
     public byte[] blockTargetBytes { get; protected set; }
@@ -104,7 +105,9 @@ public class XelisJob
         var coinbaseBytes = SerializeCoinbase(extranonceBytes, nonceBytes);
         Span<byte> hashCoinbaseBytes = stackalloc byte[XelisConstants.HashSize];
 
-        if(BlockTemplate.Algorithm == XelisConstants.AlgorithmXelisHashV2)
+        if(BlockTemplate.Algorithm == XelisConstants.AlgorithmXelisHashV3)
+            xelisHashV3.Digest(coinbaseBytes, hashCoinbaseBytes);
+        else if(BlockTemplate.Algorithm == XelisConstants.AlgorithmXelisHashV2)
             xelisHashV2.Digest(coinbaseBytes, hashCoinbaseBytes);
         else
             xelisHash.Digest(coinbaseBytes, hashCoinbaseBytes);
@@ -121,8 +124,12 @@ public class XelisJob
         var ratio = shareDiff / stratumDifficulty;
 
         // check if the share meets the much harder block difficulty (block candidate)
-        var isBlockCandidate = hashCoinbaseBytesValue <= blockTargetValue;
-        //var isBlockCandidate = XelisUtils.CheckDiff(hashCoinbaseBytes, blockTargetBytes);
+        //
+        // Do NOT rely on the raw target comparison here. With XELIS / xel-v3 this can
+        // produce false block candidates which are then rejected by the daemon with
+        // "Invalid difficulty". The shareDiff calculation is already used for worker
+        // difficulty validation, so use it for block-candidate detection as well.
+        var isBlockCandidate = shareDiff >= Difficulty * 0.99;
 
         // test if share meets at least workers current difficulty
         if(!isBlockCandidate && ratio < 0.99)
