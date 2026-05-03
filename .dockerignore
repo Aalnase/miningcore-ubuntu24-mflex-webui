@@ -1,19 +1,41 @@
-.git
-.gitmodules
-build
-build.*
-bin
-obj
-**/bin
-**/obj
-*.log
-*.sql
-*.dump
+# Do NOT ignore .git
+# GitVersion.MsBuild needs the .git directory during dotnet publish.
+
+# Local build outputs
+build/
+build.*/
+build.new/
+build.test/
+build.prev*/
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Native build outputs
+src/Native/libxelishashv3/build/
+external/xelis-hash/C/build/
+
+# Runtime configs and secrets
+config.json
 *.wallet
 *.wallet.*
 *.keys
-config.json
-mbck
-dag-zano
-**/dag-zano
-src/Native/libxelishashv3/build
+.rpcpass
+.rpcuser
+.wallet_pass
+.wallet_rpc_pass
+.api_key
+
+# Runtime files
+*.log
+*.sql
+*.dump
+mbck/
+dag-zano/
+**/dag-zano/
+
+# Archives / temporary files
+*.tar.gz
+*.zip
+*.bak
