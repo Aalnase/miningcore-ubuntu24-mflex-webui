@@ -1,16 +1,50 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0-jammy as BUILDER
-WORKDIR /app
-RUN apt-get update && \
-    apt-get -y install cmake clang ninja-build build-essential libssl-dev pkg-config libboost-all-dev libsodium-dev libzmq5 libzmq3-dev golang-go libgmp-dev libc++-dev zlib1g-dev 
-COPY . .
-WORKDIR /app/src/Miningcore
-RUN dotnet publish -c Release --framework net6.0 -o ../../build
+# syntax=docker/dockerfile:1
 
-FROM mcr.microsoft.com/dotnet/aspnet:6.0-jammy
-WORKDIR /app
+# Build stage: Ubuntu 22.04 / Jammy with .NET SDK
+FROM mcr.microsoft.com/dotnet/sdk:6.0-jammy AS build
+
+WORKDIR /src
+
 RUN apt-get update && \
-    apt-get install -y libzmq5 libzmq3-dev libsodium-dev curl && \
-    apt-get clean
-EXPOSE  4000-4090
-COPY --from=BUILDER /app/build ./
-CMD ["./Miningcore", "-c", "config.json" ]
+    apt-get install -y --no-install-recommends \
+      git \
+      build-essential \
+      cmake \
+      ca-certificates \
+      pkg-config \
+      libssl-dev \
+      libsodium-dev \
+      libzmq3-dev \
+      libboost-all-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN git submodule update --init --recursive || true
+
+RUN dotnet publish src/Miningcore/Miningcore.csproj \
+    -c Release \
+    -p:UseAppHost=true \
+    -o /app/build
+
+# Runtime stage: Ubuntu 22.04 / Jammy with ASP.NET runtime
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-jammy AS runtime
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      ca-certificates \
+      libssl3 \
+      libsodium23 \
+      libzmq5 \
+      curl \
+      tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /app/build/ /app/
+
+EXPOSE 4000
+
+ENTRYPOINT ["./Miningcore"]
+CMD ["-c", "/config/config.json"]
