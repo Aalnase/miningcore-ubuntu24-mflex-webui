@@ -181,11 +181,15 @@ build_install_multiflexcoin() {
   cmake -S "$src_dir" -B "$src_dir/build" --toolchain "$toolchain" \
     -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
   cmake --build "$src_dir/build" --parallel "${BUILD_JOBS:-$(nproc)}" --target bitcoind bitcoin-cli
-  cmake --install "$src_dir/build" --prefix /opt/multiflexcoin --strip
+  # Install only the daemon and CLI components. Installing all components would
+  # also try to install the optional wrapper binary, which is disabled in this
+  # build and may not exist.
+  cmake --install "$src_dir/build" --prefix /opt/multiflexcoin --strip --component bitcoind
+  cmake --install "$src_dir/build" --prefix /opt/multiflexcoin --strip --component bitcoin-cli
 
-  # The upstream binary names are still bitcoind/bitcoin-cli. Provide MFLEX aliases.
-  ln -sf /opt/multiflexcoin/bin/bitcoind /usr/local/bin/multiflexd
-  ln -sf /opt/multiflexcoin/bin/bitcoin-cli /usr/local/bin/multiflex-cli
+  # Provide convenient stable command names.
+  ln -sf /opt/multiflexcoin/bin/multiflexd /usr/local/bin/multiflexd
+  ln -sf /opt/multiflexcoin/bin/multiflex-cli /usr/local/bin/multiflex-cli
 }
 
 generate_multiflex_conf() {
@@ -282,7 +286,7 @@ data['api'] = {
 pool = data['pools'][0]
 pool['id'] = 'mflex'
 pool['enabled'] = True
-pool['coin'] = 'mflex'
+pool['coin'] = 'multiflex'
 pool['address'] = '${pool_wallet}'
 pool['ports'] = {'${pool_port}': {
     'listenAddress': '0.0.0.0',

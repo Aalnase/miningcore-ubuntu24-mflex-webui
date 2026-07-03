@@ -8,8 +8,8 @@ User=multiflex
 Group=multiflex
 Type=simple
 WorkingDirectory=/var/lib/multiflexcoin
-ExecStart=/opt/multiflexcoin/bin/bitcoind -conf=/etc/multiflexcoin/multiflex.conf -datadir=/var/lib/multiflexcoin -daemon=0
-ExecStop=/opt/multiflexcoin/bin/bitcoin-cli -conf=/etc/multiflexcoin/multiflex.conf -datadir=/var/lib/multiflexcoin stop
+ExecStart=/opt/multiflexcoin/bin/multiflexd -conf=/etc/multiflexcoin/multiflex.conf -datadir=/var/lib/multiflexcoin -daemon=0
+ExecStop=/opt/multiflexcoin/bin/multiflex-cli -conf=/etc/multiflexcoin/multiflex.conf -datadir=/var/lib/multiflexcoin stop
 Restart=always
 RestartSec=10
 TimeoutStopSec=120
