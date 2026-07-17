@@ -112,7 +112,7 @@ ask_webui_settings() {
 
 install_base_packages() {
   apt-get update
-  apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release git sudo jq logrotate
+  apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release git sudo jq logrotate ufw fail2ban
 
   if ! apt-cache show dotnet-sdk-10.0 >/dev/null 2>&1; then
     local ms_deb="/tmp/packages-microsoft-prod.deb"
@@ -215,8 +215,11 @@ build_install_multiflexcoin() {
     git -C "$src_dir" reset --hard "origin/$branch"
   fi
 
-  echo "Building Multiflex Core from source. This can take a while..."
-  (cd "$src_dir" && make -C depends -j"${BUILD_JOBS:-$(nproc)}")
+  echo "Building Multiflex Core daemon/CLI from source. This can take a while..."
+  # Only daemon + CLI are installed for pool servers. Skip Qt/GUI dependencies and
+  # USDT tracing dependencies so fresh VPS installs do not spend time downloading
+  # or building components that are not needed for headless pool operation.
+  (cd "$src_dir" && make -C depends NO_QT=1 NO_USDT=1 -j"${BUILD_JOBS:-$(nproc)}")
   local toolchain
   toolchain="$(find "$src_dir/depends" -path '*/toolchain.cmake' | head -n1)"
   if [[ -z "$toolchain" ]]; then
@@ -400,6 +403,7 @@ net.ipv4.tcp_max_syn_backlog = 4096
 EOF
   sysctl --system >/dev/null || true
 
+  install -d -m 0755 /etc/fail2ban/jail.d
   cat > /etc/fail2ban/jail.d/sshd-aalnase.conf <<'EOF'
 [sshd]
 enabled = true
@@ -423,11 +427,11 @@ EOF
   ufw --force reset >/dev/null
   ufw default deny incoming >/dev/null
   ufw default allow outgoing >/dev/null
-  ufw limit OpenSSH comment "rate-limited SSH" >/dev/null
+  ufw limit 22/tcp comment "rate-limited SSH" >/dev/null
   ufw allow "${MININGCORE_POOL_PORT:-3333}"/tcp comment "Miningcore MFLEX stratum mining" >/dev/null
   ufw allow "${MFLEX_P2P_PORT:-24200}"/tcp comment "Multiflex P2P" >/dev/null
   if [[ "${INSTALL_WEBUI:-false}" == "true" ]]; then
-    ufw allow 80/tcp comment "HTTP for WebUI and Let's Encrypt" >/dev/null
+    ufw allow 80/tcp comment "HTTP for WebUI and Lets Encrypt" >/dev/null
     ufw allow 443/tcp comment "HTTPS WebUI" >/dev/null
   fi
   if [[ "${ALLOW_PUBLIC_API:-false}" == "true" ]]; then
@@ -708,7 +712,12 @@ main() {
   ensure_mflex_pool_address
   generate_miningcore_config
   start_miningcore_after_config
+  if [[ "${INSTALL_WEBUI:-false}" == "true" ]]; then
+    bash "$REPO_ROOT/contrib/install/install-webui-static.sh"
+  fi
   print_summary
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
