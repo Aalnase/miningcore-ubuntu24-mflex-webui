@@ -71,7 +71,7 @@ ask_pool_mode() {
 
 install_base_packages() {
   apt-get update
-  apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release git sudo jq
+  apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release git sudo jq logrotate
 
   if ! apt-cache show dotnet-sdk-10.0 >/dev/null 2>&1; then
     local ms_deb="/tmp/packages-microsoft-prod.deb"
@@ -388,6 +388,124 @@ EOF
   ufw status verbose
 }
 
+
+configure_retention_and_maintenance() {
+  echo "Configuring log rotation, 30-day retention, and PostgreSQL maintenance ..."
+
+  local retention_days="${POOL_RETENTION_DAYS:-30}"
+  local postgres_db="${MININGCORE_DB_NAME:-miningcore}"
+
+  # Miningcore writes normal file logs under /var/log/miningcore. Rotate daily,
+  # keep 30 days by default, compress old logs, and use copytruncate so the
+  # running process does not need a signal/restart to release file handles.
+  cat > /etc/logrotate.d/miningcore <<EOF
+/var/log/miningcore/*.log {
+    daily
+    rotate ${retention_days}
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    create 0640 miningcore miningcore
+}
+EOF
+
+  # Multiflex Core/Bitcoin-like daemons normally write debug.log in the data
+  # directory. Keep the same retention policy and avoid interrupting the daemon.
+  cat > /etc/logrotate.d/multiflexcoin <<EOF
+/var/lib/multiflexcoin/debug.log
+/var/lib/multiflexcoin/testnet*/debug.log
+/var/lib/multiflexcoin/regtest/debug.log {
+    daily
+    rotate ${retention_days}
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    su multiflex multiflex
+    create 0640 multiflex multiflex
+}
+EOF
+
+  # Journald can otherwise grow without a clear bound on small VPS systems.
+  install -d -m 0755 /etc/systemd/journald.conf.d
+  cat > /etc/systemd/journald.conf.d/99-aalnase-pool-retention.conf <<EOF
+[Journal]
+SystemMaxUse=1G
+RuntimeMaxUse=256M
+MaxRetentionSec=${retention_days}day
+Compress=yes
+EOF
+  systemctl restart systemd-journald
+
+  # A conservative cleanup job for generated/transient files. It does not touch
+  # blockchain data, wallets, PostgreSQL data, or current configs. Operator
+  # backups made by this installer are kept for POOL_RETENTION_DAYS days.
+  cat > /usr/local/sbin/aalnase-pool-maintenance.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+RETENTION_DAYS="${POOL_RETENTION_DAYS:-30}"
+DB_NAME="${MININGCORE_DB_NAME:-miningcore}"
+
+# Remove stale temp/build/cache leftovers related to this pool only.
+find /tmp /var/tmp -xdev -mindepth 1 -maxdepth 2 \
+  \( -iname '*miningcore*' -o -iname '*multiflex*' -o -iname '*mflex*' -o -iname '*aalnase*' \) \
+  -mtime +"${RETENTION_DAYS}" -exec rm -rf {} + 2>/dev/null || true
+
+# Remove old installer/operator backups after the retention window.
+if [[ -d /root/backups ]]; then
+  find /root/backups -xdev -mindepth 1 -maxdepth 1 -type d -mtime +"${RETENTION_DAYS}" -exec rm -rf {} + 2>/dev/null || true
+fi
+
+# Compress any uncompressed rotated logs older than one day that logrotate left behind.
+find /var/log/miningcore /var/lib/multiflexcoin -xdev -type f -name '*.log.[0-9]*' -mtime +1 ! -name '*.gz' -exec gzip -9 {} + 2>/dev/null || true
+
+# Miningcore DB maintenance: non-blocking VACUUM ANALYZE. Autovacuum stays enabled,
+# this timer is an extra predictable cleanup pass for shares/blocks/payments tables.
+if systemctl is-active --quiet postgresql; then
+  sudo -u postgres psql -d "${DB_NAME}" -v ON_ERROR_STOP=1 -c 'VACUUM (ANALYZE);' >/dev/null
+fi
+EOF
+  chmod 0755 /usr/local/sbin/aalnase-pool-maintenance.sh
+
+  cat > /etc/systemd/system/aalnase-pool-maintenance.service <<EOF
+[Unit]
+Description=Aalnase Mining Pool daily cleanup and PostgreSQL vacuum
+After=postgresql.service
+
+[Service]
+Type=oneshot
+Environment=POOL_RETENTION_DAYS=${retention_days}
+Environment=MININGCORE_DB_NAME=${postgres_db}
+ExecStart=/usr/local/sbin/aalnase-pool-maintenance.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+EOF
+
+  cat > /etc/systemd/system/aalnase-pool-maintenance.timer <<'EOF'
+[Unit]
+Description=Run Aalnase Mining Pool cleanup and PostgreSQL vacuum daily
+
+[Timer]
+OnCalendar=*-*-* 03:20:00
+RandomizedDelaySec=30m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable --now aalnase-pool-maintenance.timer
+
+  # Validate logrotate syntax now so broken rotation config is caught during install.
+  logrotate -d /etc/logrotate.d/miningcore >/dev/null
+  logrotate -d /etc/logrotate.d/multiflexcoin >/dev/null
+}
+
 start_multiflex_for_setup() {
   systemctl daemon-reload
   systemctl enable multiflexd
@@ -509,6 +627,8 @@ Check status:
 MFLEX RPC user: ${MFLEX_RPC_USER}
 MFLEX RPC port: ${MFLEX_RPC_PORT}
 Miningcore pool port: ${MININGCORE_POOL_PORT:-3333}
+Log/backup retention: ${POOL_RETENTION_DAYS:-30} days
+Maintenance timer: aalnase-pool-maintenance.timer (daily VACUUM ANALYZE + cleanup)
 
 Generated MFLEX pool address: ${MFLEX_POOL_ADDRESS:-unknown}
 If you prefer a different payout address, replace it in /etc/miningcore/config.json and restart miningcore.
@@ -528,6 +648,7 @@ main() {
   generate_multiflex_conf
   install_systemd_units
   configure_firewall_hardening
+  configure_retention_and_maintenance
   start_multiflex_for_setup
   wait_for_multiflex_rpc
   wait_for_multiflex_sync_hint

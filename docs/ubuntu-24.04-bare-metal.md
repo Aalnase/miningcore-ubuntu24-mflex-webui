@@ -13,6 +13,8 @@ This fork can run without Docker. The supported bare-metal target is Ubuntu 24.0
 - Multiflex Core from `https://github.com/Aalnase/multiflexcoin` built from source and installed to `/opt/multiflexcoin`
 - `multiflexd.service` and `miningcore.service`
 - a generated MFLEX pool config at `/etc/miningcore/config.json`
+- log rotation for Miningcore and Multiflex logs with 30-day default retention
+- a daily maintenance timer for PostgreSQL `VACUUM (ANALYZE)` and safe cleanup of stale pool temp/backups
 
 `coins.json` is intentionally left untouched. It remains a broad example catalog from which operators can copy the coin definitions they actually need.
 
@@ -24,6 +26,7 @@ The installer asks for one of two profiles:
 - `home`: intended for a home/LAN pool. Payment processing is disabled by default, API binds to localhost, API rate limiting is disabled, and the pool starts with lower difficulty.
 
 Override the rate-limit default if needed with `MININGCORE_API_RATE_LIMIT=<requests-per-second>`.
+Override the retention window if needed with `POOL_RETENTION_DAYS=<days>`; the default is `30`.
 
 Run interactively:
 
@@ -47,6 +50,8 @@ sudo POOL_MODE=public MFLEX_POOL_ADDRESS=M... ./contrib/install/install-ubuntu-2
 - Multiflex config: `/etc/multiflexcoin/multiflex.conf`
 - Multiflex data: `/var/lib/multiflexcoin`
 - Logs: `journalctl -u miningcore -f` and `journalctl -u multiflexd -f`
+- Logrotate configs: `/etc/logrotate.d/miningcore` and `/etc/logrotate.d/multiflexcoin`
+- Maintenance timer: `aalnase-pool-maintenance.timer`
 
 ## After install
 
@@ -61,6 +66,14 @@ Firewall defaults:
 - closed externally by default: `4000/tcp` Miningcore API
 
 For a test system that really needs the Miningcore API public, run the installer with `ALLOW_PUBLIC_API=true`. For production, prefer keeping port 4000 private and exposing only selected endpoints through a reverse proxy.
+
+Maintenance defaults:
+
+- Miningcore file logs in `/var/log/miningcore/*.log` rotate daily, are compressed, and keep `POOL_RETENTION_DAYS` days (`30` by default).
+- Multiflex `debug.log` rotates daily with the same retention.
+- `systemd-journald` is capped and given the same retention window.
+- `aalnase-pool-maintenance.timer` runs daily around 03:20 with randomized delay. It removes stale pool-related temp/build files, removes old `/root/backups/*` directories after the retention window, compresses leftover rotated logs, and runs PostgreSQL `VACUUM (ANALYZE)` on the Miningcore database.
+- The cleanup job does **not** delete blockchain data, wallets, PostgreSQL data, or current config files.
 
 Check status:
 
