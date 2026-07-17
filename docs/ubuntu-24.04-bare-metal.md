@@ -20,8 +20,10 @@ This fork can run without Docker. The supported bare-metal target is Ubuntu 24.0
 
 The installer asks for one of two profiles:
 
-- `public`: intended for a public internet pool. Payment processing is enabled, API rate limiting is enabled, and the pool uses higher default difficulty.
-- `home`: intended for a home/LAN pool. Payment processing is disabled by default, API binds to localhost, and the pool starts with lower difficulty.
+- `public`: intended for a public internet pool. Payment processing is enabled, API rate limiting is enabled at a WebUI-friendly default of `300` requests/second, and the pool uses higher default difficulty.
+- `home`: intended for a home/LAN pool. Payment processing is disabled by default, API binds to localhost, API rate limiting is disabled, and the pool starts with lower difficulty.
+
+Override the rate-limit default if needed with `MININGCORE_API_RATE_LIMIT=<requests-per-second>`.
 
 Run interactively:
 

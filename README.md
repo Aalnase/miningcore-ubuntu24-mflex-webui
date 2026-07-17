@@ -221,7 +221,7 @@ Non-interactive examples:
 The installer provides two profiles:
 
 - `home`: localhost API, low starting difficulty, payment processing disabled but SOLO payout scheme preconfigured.
-- `public`: public-facing API bind, higher difficulty, payment processing enabled, SOLO payout scheme.
+- `public`: public-facing API bind, higher difficulty, payment processing enabled, SOLO payout scheme, and a higher API rate limit (`MININGCORE_API_RATE_LIMIT`, default `300` requests/second) so the WebUI does not trip the old `10/1s` Miningcore default.
 
 MFLEX installs as a SOLO pool by default: the miner that finds a block receives the block reward. This is enforced by the installer even if the source example is copied from a generic PPLNS Miningcore template.
 

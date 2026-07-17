@@ -224,11 +224,12 @@ EOF
 generate_miningcore_config() {
   local pool_wallet="${MFLEX_POOL_ADDRESS:-YOUR_MFLEX_POOL_WALLET_ADDRESS}"
   local pool_port="${MININGCORE_POOL_PORT:-3333}"
-  local api_address api_rate_disabled payment_enabled min_diff start_diff max_diff
+  local api_address api_rate_disabled api_rate_limit payment_enabled min_diff start_diff max_diff
 
   if [[ "${POOL_MODE}" == "public" ]]; then
     api_address="*"
     api_rate_disabled="false"
+    api_rate_limit="${MININGCORE_API_RATE_LIMIT:-300}"
     payment_enabled="true"
     min_diff=512
     start_diff=1024
@@ -236,6 +237,7 @@ generate_miningcore_config() {
   else
     api_address="127.0.0.1"
     api_rate_disabled="true"
+    api_rate_limit="${MININGCORE_API_RATE_LIMIT:-300}"
     payment_enabled="false"
     min_diff=1
     start_diff=16
@@ -279,8 +281,8 @@ data['api'] = {
     'metricsIpWhitelist': ['127.0.0.1'],
     'rateLimiting': {
         'disabled': '${api_rate_disabled}' == 'true',
-        'rules': [{'Endpoint': '*', 'Period': '1s', 'Limit': 10}],
-        'ipWhitelist': ['127.0.0.1'],
+        'rules': [{'Endpoint': '*', 'Period': '1s', 'Limit': int('${api_rate_limit}')}],
+        'ipWhitelist': ['127.0.0.1', '::1'],
     },
 }
 pool = data['pools'][0]
