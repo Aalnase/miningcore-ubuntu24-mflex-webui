@@ -15,6 +15,9 @@ apt-get update
 apt-get install -y --no-install-recommends nginx certbot ca-certificates curl
 
 install -d -m 0755 "$WEBROOT" "$WEBROOT/assets"
+if [[ -d "$(dirname "$TEMPLATE")/assets" ]]; then
+  cp -a "$(dirname "$TEMPLATE")/assets/." "$WEBROOT/assets/"
+fi
 curl -fsSL "${MFLEX_LOGO_URL:-https://explorer.multiflexcoin.com/img/page-title-img.png}" -o "$WEBROOT/assets/mflex.png" || true
 
 if [[ ! -f "$TEMPLATE" ]]; then
