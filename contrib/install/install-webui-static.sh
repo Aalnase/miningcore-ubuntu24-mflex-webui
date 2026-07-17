@@ -54,7 +54,10 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
-    location / { try_files \$uri \$uri/ /index.html; }
+    location / {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+        try_files \$uri \$uri/ /index.html;
+    }
 }
 NGINX
 ln -sf /etc/nginx/sites-available/miningcore-webui /etc/nginx/sites-enabled/miningcore-webui
@@ -93,7 +96,10 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
-    location / { try_files \$uri \$uri/ /index.html; }
+    location / {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+        try_files \$uri \$uri/ /index.html;
+    }
 }
 NGINX
   systemctl enable certbot.timer >/dev/null 2>&1 || true
