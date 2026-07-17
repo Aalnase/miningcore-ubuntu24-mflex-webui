@@ -217,6 +217,7 @@ Non-interactive examples:
 
     sudo POOL_MODE=home ./contrib/install/install-ubuntu-24.04.sh
     sudo POOL_MODE=public MFLEX_POOL_ADDRESS=M... ./contrib/install/install-ubuntu-24.04.sh
+    sudo POOL_MODE=public INSTALL_WEBUI=true WEBUI_DOMAIN=test.go-poolmining.com LETSENCRYPT_EMAIL=admin@example.com ./contrib/install/install-ubuntu-24.04.sh
 
 The installer provides two profiles:
 
@@ -224,6 +225,8 @@ The installer provides two profiles:
 - `public`: public-facing API bind, higher difficulty, payment processing enabled, SOLO payout scheme, and a higher API rate limit (`MININGCORE_API_RATE_LIMIT`, default `300` requests/second) so the WebUI does not trip the old `10/1s` Miningcore default.
 
 The installer also configures daily log rotation, caps journald growth, keeps pool logs/backups for `POOL_RETENTION_DAYS` days (`30` by default), and enables `aalnase-pool-maintenance.timer` for PostgreSQL `VACUUM (ANALYZE)` plus safe cleanup of old pool temp/build files.
+
+When `INSTALL_WEBUI=true`, provide `WEBUI_DOMAIN` and `LETSENCRYPT_EMAIL` (or answer the prompts) so the installer can prepare Nginx/Certbot packages, open HTTP/HTTPS firewall ports, and later issue the Let's Encrypt certificate for the frontend domain.
 
 MFLEX installs as a SOLO pool by default: the miner that finds a block receives the block reward. This is enforced by the installer even if the source example is copied from a generic PPLNS Miningcore template.
 

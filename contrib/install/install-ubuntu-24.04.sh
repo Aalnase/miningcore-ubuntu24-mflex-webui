@@ -69,6 +69,47 @@ ask_pool_mode() {
   export POOL_MODE
 }
 
+
+ask_webui_settings() {
+  # Frontend installation is optional in this bare-metal script. When enabled,
+  # collect the public domain and Let's Encrypt email up front so HTTPS can be
+  # issued non-interactively and static WebUI files can be branded correctly.
+  INSTALL_WEBUI="${INSTALL_WEBUI:-false}"
+  WEBUI_ENABLE_HTTPS="${WEBUI_ENABLE_HTTPS:-true}"
+
+  case "${INSTALL_WEBUI}" in
+    true|false) ;;
+    *) echo "INSTALL_WEBUI must be 'true' or 'false'" >&2; exit 1 ;;
+  esac
+  case "${WEBUI_ENABLE_HTTPS}" in
+    true|false) ;;
+    *) echo "WEBUI_ENABLE_HTTPS must be 'true' or 'false'" >&2; exit 1 ;;
+  esac
+
+  if [[ "${INSTALL_WEBUI}" != "true" ]]; then
+    export INSTALL_WEBUI WEBUI_ENABLE_HTTPS
+    return 0
+  fi
+
+  if [[ -z "${WEBUI_DOMAIN:-}" ]]; then
+    read -r -p "WebUI domain/subdomain (for example test.go-poolmining.com): " WEBUI_DOMAIN
+  fi
+  if [[ -z "${WEBUI_DOMAIN:-}" ]]; then
+    echo "WEBUI_DOMAIN is required when INSTALL_WEBUI=true" >&2
+    exit 1
+  fi
+
+  if [[ "${WEBUI_ENABLE_HTTPS}" == "true" && -z "${LETSENCRYPT_EMAIL:-}" ]]; then
+    read -r -p "Let's Encrypt email for ${WEBUI_DOMAIN}: " LETSENCRYPT_EMAIL
+  fi
+  if [[ "${WEBUI_ENABLE_HTTPS}" == "true" && -z "${LETSENCRYPT_EMAIL:-}" ]]; then
+    echo "LETSENCRYPT_EMAIL is required when WEBUI_ENABLE_HTTPS=true" >&2
+    exit 1
+  fi
+
+  export INSTALL_WEBUI WEBUI_ENABLE_HTTPS WEBUI_DOMAIN LETSENCRYPT_EMAIL
+}
+
 install_base_packages() {
   apt-get update
   apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release git sudo jq logrotate
@@ -87,6 +128,10 @@ install_base_packages() {
     gperf bison flex automake libtool gettext zip unzip clang \
     libssl-dev libboost-all-dev libsodium-dev libzmq5 libzmq3-dev \
     libgmp-dev libc++-dev zlib1g-dev
+
+  if [[ "${INSTALL_WEBUI:-false}" == "true" ]]; then
+    apt-get install -y --no-install-recommends nginx certbot python3-certbot-nginx
+  fi
 }
 
 install_postgresql18() {
@@ -381,6 +426,10 @@ EOF
   ufw limit OpenSSH comment "rate-limited SSH" >/dev/null
   ufw allow "${MININGCORE_POOL_PORT:-3333}"/tcp comment "Miningcore MFLEX stratum mining" >/dev/null
   ufw allow "${MFLEX_P2P_PORT:-24200}"/tcp comment "Multiflex P2P" >/dev/null
+  if [[ "${INSTALL_WEBUI:-false}" == "true" ]]; then
+    ufw allow 80/tcp comment "HTTP for WebUI and Let's Encrypt" >/dev/null
+    ufw allow 443/tcp comment "HTTPS WebUI" >/dev/null
+  fi
   if [[ "${ALLOW_PUBLIC_API:-false}" == "true" ]]; then
     ufw allow 4000/tcp comment "Miningcore API - explicitly enabled" >/dev/null
   fi
@@ -629,6 +678,9 @@ MFLEX RPC port: ${MFLEX_RPC_PORT}
 Miningcore pool port: ${MININGCORE_POOL_PORT:-3333}
 Log/backup retention: ${POOL_RETENTION_DAYS:-30} days
 Maintenance timer: aalnase-pool-maintenance.timer (daily VACUUM ANALYZE + cleanup)
+WebUI install requested: ${INSTALL_WEBUI:-false}
+WebUI domain: ${WEBUI_DOMAIN:-not configured}
+Let's Encrypt email: ${LETSENCRYPT_EMAIL:-not configured}
 
 Generated MFLEX pool address: ${MFLEX_POOL_ADDRESS:-unknown}
 If you prefer a different payout address, replace it in /etc/miningcore/config.json and restart miningcore.
@@ -639,6 +691,7 @@ main() {
   require_root
   require_ubuntu_24_plus
   ask_pool_mode
+  ask_webui_settings
   install_base_packages
   install_postgresql18
   setup_users

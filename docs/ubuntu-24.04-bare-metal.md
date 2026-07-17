@@ -28,6 +28,8 @@ The installer asks for one of two profiles:
 Override the rate-limit default if needed with `MININGCORE_API_RATE_LIMIT=<requests-per-second>`.
 Override the retention window if needed with `POOL_RETENTION_DAYS=<days>`; the default is `30`.
 
+If WebUI installation is enabled later with `INSTALL_WEBUI=true`, the installer requires a public `WEBUI_DOMAIN` and, when HTTPS is enabled, `LETSENCRYPT_EMAIL`. If those variables are not supplied non-interactively, the installer prompts for them so Certbot/Let's Encrypt can issue the certificate correctly.
+
 Run interactively:
 
 ```bash
@@ -39,6 +41,7 @@ Or non-interactively:
 ```bash
 sudo POOL_MODE=home ./contrib/install/install-ubuntu-24.04.sh
 sudo POOL_MODE=public MFLEX_POOL_ADDRESS=M... ./contrib/install/install-ubuntu-24.04.sh
+sudo POOL_MODE=public INSTALL_WEBUI=true WEBUI_DOMAIN=test.go-poolmining.com LETSENCRYPT_EMAIL=admin@example.com ./contrib/install/install-ubuntu-24.04.sh
 ```
 
 ## Important files
