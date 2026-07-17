@@ -324,6 +324,64 @@ install_systemd_units() {
   systemctl enable multiflexd miningcore
 }
 
+configure_firewall_hardening() {
+  echo "Configuring firewall and basic attack protection ..."
+
+  cat > /etc/sysctl.d/99-aalnase-pool-hardening.conf <<'EOF'
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv6.conf.all.accept_redirects = 0
+net.ipv6.conf.default.accept_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv4.conf.default.accept_source_route = 0
+net.ipv6.conf.all.accept_source_route = 0
+net.ipv6.conf.default.accept_source_route = 0
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+net.ipv4.icmp_ignore_bogus_error_responses = 1
+net.ipv4.tcp_fin_timeout = 15
+net.ipv4.tcp_keepalive_time = 600
+net.ipv4.tcp_max_syn_backlog = 4096
+EOF
+  sysctl --system >/dev/null || true
+
+  cat > /etc/fail2ban/jail.d/sshd-aalnase.conf <<'EOF'
+[sshd]
+enabled = true
+mode = aggressive
+port = ssh
+filter = sshd
+backend = systemd
+maxretry = 5
+findtime = 10m
+bantime = 1h
+EOF
+  systemctl enable --now fail2ban >/dev/null
+  systemctl restart fail2ban
+
+  # Safe public surface:
+  # - SSH is rate-limited so this script does not lock out remote admins.
+  # - Stratum mining and MFLEX P2P are public.
+  # - MFLEX RPC stays bound to localhost in multiflex.conf and is not opened.
+  # - Miningcore API is not opened by default; expose it through a reverse proxy
+  #   or set ALLOW_PUBLIC_API=true for a test system that really needs it.
+  ufw --force reset >/dev/null
+  ufw default deny incoming >/dev/null
+  ufw default allow outgoing >/dev/null
+  ufw limit OpenSSH comment "rate-limited SSH" >/dev/null
+  ufw allow "${MININGCORE_POOL_PORT:-3333}"/tcp comment "Miningcore MFLEX stratum mining" >/dev/null
+  ufw allow "${MFLEX_P2P_PORT:-24200}"/tcp comment "Multiflex P2P" >/dev/null
+  if [[ "${ALLOW_PUBLIC_API:-false}" == "true" ]]; then
+    ufw allow 4000/tcp comment "Miningcore API - explicitly enabled" >/dev/null
+  fi
+  ufw --force enable >/dev/null
+  ufw status verbose
+}
+
 start_multiflex_for_setup() {
   systemctl daemon-reload
   systemctl enable multiflexd
@@ -463,6 +521,7 @@ main() {
   build_install_multiflexcoin
   generate_multiflex_conf
   install_systemd_units
+  configure_firewall_hardening
   start_multiflex_for_setup
   wait_for_multiflex_rpc
   wait_for_multiflex_sync_hint
