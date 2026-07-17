@@ -51,10 +51,7 @@
       "paymentProcessing": {
         "enabled": true,
         "minimumPayment": 1.0,
-        "payoutScheme": "PPLNS",
-        "payoutSchemeConfig": {
-          "factor": 2.0
-        }
+        "payoutScheme": "SOLO"
       }
     }
   ]

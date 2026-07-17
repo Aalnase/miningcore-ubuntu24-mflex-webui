@@ -308,6 +308,10 @@ pool['daemons'] = [{
     'password': os.environ['MFLEX_RPC_PASSWORD'],
 }]
 pool['paymentProcessing']['enabled'] = '${payment_enabled}' == 'true'
+# MFLEX is intended to run as a SOLO pool: the miner that finds the block
+# receives the block reward. Do not inherit PPLNS defaults from generic examples.
+pool['paymentProcessing']['payoutScheme'] = 'SOLO'
+pool['paymentProcessing'].pop('payoutSchemeConfig', None)
 with open(dst, 'w') as f:
     json.dump(data, f, indent=2)
     f.write('\n')

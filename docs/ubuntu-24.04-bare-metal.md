@@ -48,7 +48,7 @@ sudo POOL_MODE=public MFLEX_POOL_ADDRESS=M... ./contrib/install/install-ubuntu-2
 
 ## After install
 
-The installer configures UFW/fail2ban/sysctl hardening, starts `multiflexd`, waits for RPC, prints the current MFLEX chain data-directory size, creates/loads a `poolwallet`, generates a legacy/base58 MFLEX pool payout address, writes it into `/etc/miningcore/config.json`, and then starts/restarts Miningcore automatically.
+The installer configures UFW/fail2ban/sysctl hardening, starts `multiflexd`, waits for RPC, prints the current MFLEX chain data-directory size, creates/loads a `poolwallet`, generates a legacy/base58 MFLEX pool payout address, writes it into `/etc/miningcore/config.json`, enforces MFLEX `payoutScheme: SOLO`, and then starts/restarts Miningcore automatically.
 
 Firewall defaults:
 

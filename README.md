@@ -220,8 +220,10 @@ Non-interactive examples:
 
 The installer provides two profiles:
 
-- `public`: public internet pool defaults, payment processing enabled.
-- `home`: home/LAN pool defaults, API localhost-only, payment processing disabled by default.
+- `home`: localhost API, low starting difficulty, payment processing disabled but SOLO payout scheme preconfigured.
+- `public`: public-facing API bind, higher difficulty, payment processing enabled, SOLO payout scheme.
+
+MFLEX installs as a SOLO pool by default: the miner that finds a block receives the block reward. This is enforced by the installer even if the source example is copied from a generic PPLNS Miningcore template.
 
 The installer also builds and installs Multiflex Core from:
 
