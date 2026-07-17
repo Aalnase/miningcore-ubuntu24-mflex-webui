@@ -324,6 +324,105 @@ install_systemd_units() {
   systemctl enable multiflexd miningcore
 }
 
+start_multiflex_for_setup() {
+  systemctl daemon-reload
+  systemctl enable multiflexd
+  systemctl restart multiflexd
+}
+
+wait_for_multiflex_rpc() {
+  local cli="/opt/multiflexcoin/bin/multiflex-cli"
+  local conf="/etc/multiflexcoin/multiflex.conf"
+  local datadir="/var/lib/multiflexcoin"
+  local timeout="${MFLEX_RPC_WAIT_SECONDS:-300}"
+  local i
+
+  echo "Waiting for Multiflex RPC to become available (timeout ${timeout}s) ..."
+  for ((i=0; i<timeout; i+=2)); do
+    if "$cli" -conf="$conf" -datadir="$datadir" getblockchaininfo >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "Multiflex RPC did not become available within ${timeout}s" >&2
+  systemctl status multiflexd --no-pager || true
+  journalctl -u multiflexd -n 80 --no-pager || true
+  exit 1
+}
+
+wait_for_multiflex_sync_hint() {
+  local cli="/opt/multiflexcoin/bin/multiflex-cli"
+  local conf="/etc/multiflexcoin/multiflex.conf"
+  local datadir="/var/lib/multiflexcoin"
+  local timeout="${MFLEX_SYNC_WAIT_SECONDS:-600}"
+  local info blocks headers ibd size i
+
+  echo "Checking Multiflex chain size and sync state ..."
+  du -sh "$datadir" 2>/dev/null || true
+
+  for ((i=0; i<timeout; i+=5)); do
+    info="$($cli -conf="$conf" -datadir="$datadir" getblockchaininfo 2>/dev/null || true)"
+    if [[ -n "$info" ]]; then
+      blocks="$(python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("blocks", 0))' <<<"$info")"
+      headers="$(python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("headers", 0))' <<<"$info")"
+      ibd="$(python3 -c 'import json,sys; d=json.load(sys.stdin); print(str(d.get("initialblockdownload", True)).lower())' <<<"$info")"
+      size="$(du -sh "$datadir" 2>/dev/null | awk '{print $1}')"
+      echo "MFLEX sync: blocks=${blocks}, headers=${headers}, initialblockdownload=${ibd}, datadir=${size:-unknown}"
+
+      # Do not block forever on a brand-new/small chain where DNS peers may take
+      # a while. Miningcore can start once RPC is online; it will reconnect as the
+      # daemon syncs. If IBD is already false, great.
+      if [[ "$ibd" == "false" ]]; then
+        return 0
+      fi
+    fi
+    sleep 5
+  done
+
+  echo "MFLEX is still in initial block download after ${timeout}s; continuing anyway because the chain is small and Miningcore can be restarted later if needed."
+}
+
+ensure_mflex_pool_address() {
+  if [[ -n "${MFLEX_POOL_ADDRESS:-}" && "${MFLEX_POOL_ADDRESS}" != "YOUR_MFLEX_POOL_WALLET_ADDRESS" ]]; then
+    export MFLEX_POOL_ADDRESS
+    echo "Using provided MFLEX pool address: ${MFLEX_POOL_ADDRESS}"
+    return 0
+  fi
+
+  local cli="/opt/multiflexcoin/bin/multiflex-cli"
+  local conf="/etc/multiflexcoin/multiflex.conf"
+  local datadir="/var/lib/multiflexcoin"
+  local wallet="${MFLEX_POOL_WALLET_NAME:-poolwallet}"
+  local addr=""
+
+  echo "Creating/loading Multiflex wallet '${wallet}' for the pool payout address ..."
+  "$cli" -conf="$conf" -datadir="$datadir" createwallet "$wallet" >/dev/null 2>&1 || \
+    "$cli" -conf="$conf" -datadir="$datadir" loadwallet "$wallet" >/dev/null 2>&1 || true
+
+  # Prefer legacy/base58 for Miningcore compatibility. Fall back to the daemon
+  # default only if the address type argument is not supported.
+  addr="$($cli -conf="$conf" -datadir="$datadir" -rpcwallet="$wallet" getnewaddress "" legacy 2>/dev/null || true)"
+  if [[ -z "$addr" ]]; then
+    addr="$($cli -conf="$conf" -datadir="$datadir" -rpcwallet="$wallet" getnewaddress 2>/dev/null || true)"
+  fi
+
+  if [[ -z "$addr" ]]; then
+    echo "Could not create an MFLEX pool address" >&2
+    exit 1
+  fi
+
+  export MFLEX_POOL_ADDRESS="$addr"
+  echo "Generated MFLEX pool address: ${MFLEX_POOL_ADDRESS}"
+}
+
+start_miningcore_after_config() {
+  systemctl daemon-reload
+  systemctl enable miningcore
+  systemctl restart miningcore || true
+  systemctl status miningcore --no-pager || true
+}
+
 print_summary() {
   cat <<EOF
 
@@ -335,9 +434,7 @@ Miningcore config: /etc/miningcore/config.json
 Multiflex Core: /opt/multiflexcoin
 Multiflex config: /etc/multiflexcoin/multiflex.conf
 
-Start services:
-  sudo systemctl start multiflexd
-  sudo systemctl start miningcore
+Services are started automatically by the installer.
 
 Check status:
   sudo systemctl status multiflexd --no-pager
@@ -349,8 +446,8 @@ MFLEX RPC user: ${MFLEX_RPC_USER}
 MFLEX RPC port: ${MFLEX_RPC_PORT}
 Miningcore pool port: ${MININGCORE_POOL_PORT:-3333}
 
-IMPORTANT: Replace YOUR_MFLEX_POOL_WALLET_ADDRESS in /etc/miningcore/config.json
-with a real MFLEX pool payout address before public production use.
+Generated MFLEX pool address: ${MFLEX_POOL_ADDRESS:-unknown}
+If you prefer a different payout address, replace it in /etc/miningcore/config.json and restart miningcore.
 EOF
 }
 
@@ -365,8 +462,13 @@ main() {
   build_install_miningcore
   build_install_multiflexcoin
   generate_multiflex_conf
-  generate_miningcore_config
   install_systemd_units
+  start_multiflex_for_setup
+  wait_for_multiflex_rpc
+  wait_for_multiflex_sync_hint
+  ensure_mflex_pool_address
+  generate_miningcore_config
+  start_miningcore_after_config
   print_summary
 }
 

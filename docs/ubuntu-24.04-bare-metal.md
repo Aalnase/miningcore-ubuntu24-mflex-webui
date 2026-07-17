@@ -48,26 +48,21 @@ sudo POOL_MODE=public MFLEX_POOL_ADDRESS=M... ./contrib/install/install-ubuntu-2
 
 ## After install
 
-1. Edit `/etc/miningcore/config.json` and replace `YOUR_MFLEX_POOL_WALLET_ADDRESS` with your real MFLEX payout address.
-2. Start Multiflex Core:
+The installer starts `multiflexd`, waits for RPC, prints the current MFLEX chain data-directory size, creates/loads a `poolwallet`, generates a legacy/base58 MFLEX pool payout address, writes it into `/etc/miningcore/config.json`, and then starts/restarts Miningcore automatically.
 
-```bash
-sudo systemctl start multiflexd
-```
-
-3. Wait until the node is synced enough for mining RPCs.
-4. Start Miningcore:
-
-```bash
-sudo systemctl start miningcore
-```
-
-5. Check status:
+Check status:
 
 ```bash
 sudo systemctl status multiflexd --no-pager
 sudo systemctl status miningcore --no-pager
 journalctl -u miningcore -f
+```
+
+If you want to use a different payout address later, edit `/etc/miningcore/config.json`, replace the pool `address`, and restart Miningcore:
+
+```bash
+sudo nano /etc/miningcore/config.json
+sudo systemctl restart miningcore
 ```
 
 ## Updating
