@@ -245,7 +245,9 @@ generate_multiflex_conf() {
   local rpc_password="${MFLEX_RPC_PASSWORD:-$(random_secret)}"
   local rpc_port="${MFLEX_RPC_PORT:-26015}"
   local p2p_port="${MFLEX_P2P_PORT:-24200}"
-  export MFLEX_RPC_USER="$rpc_user" MFLEX_RPC_PASSWORD="$rpc_password" MFLEX_RPC_PORT="$rpc_port" MFLEX_P2P_PORT="$p2p_port"
+  local zmq_block_port="${MFLEX_ZMQ_BLOCK_PORT:-26016}"
+  local zmq_tx_port="${MFLEX_ZMQ_TX_PORT:-26017}"
+  export MFLEX_RPC_USER="$rpc_user" MFLEX_RPC_PASSWORD="$rpc_password" MFLEX_RPC_PORT="$rpc_port" MFLEX_P2P_PORT="$p2p_port" MFLEX_ZMQ_BLOCK_PORT="$zmq_block_port" MFLEX_ZMQ_TX_PORT="$zmq_tx_port"
 
   backup_if_exists /etc/multiflexcoin/multiflex.conf
   cat > /etc/multiflexcoin/multiflex.conf <<EOF
@@ -258,8 +260,8 @@ rpcallowip=127.0.0.1
 rpcport=${rpc_port}
 rpcuser=${rpc_user}
 rpcpassword=${rpc_password}
-zmqpubhashblock=tcp://127.0.0.1:26016
-zmqpubhashtx=tcp://127.0.0.1:26017
+zmqpubhashblock=tcp://127.0.0.1:${zmq_block_port}
+zmqpubhashtx=tcp://127.0.0.1:${zmq_tx_port}
 
 # Home pools can keep pruning enabled to reduce disk usage. Public pools should
 # generally run archival/full nodes.
@@ -272,16 +274,21 @@ EOF
 generate_miningcore_config() {
   local pool_wallet="${MFLEX_POOL_ADDRESS:-YOUR_MFLEX_POOL_WALLET_ADDRESS}"
   local pool_port="${MININGCORE_POOL_PORT:-3333}"
-  local api_address api_rate_disabled api_rate_limit payment_enabled min_diff start_diff max_diff
+  local api_address api_rate_disabled api_rate_limit payment_enabled min_diff start_diff max_diff vardiff_target_time vardiff_retarget_time
 
   if [[ "${POOL_MODE}" == "public" ]]; then
     api_address="*"
     api_rate_disabled="false"
     api_rate_limit="${MININGCORE_API_RATE_LIMIT:-300}"
     payment_enabled="true"
-    min_diff=512
-    start_diff=1024
-    max_diff=1048576
+    # Target roughly 0.10-0.11 shares/sec for the current small public pool.
+    # With VarDiff, targetTime is per worker/connection; 43s keeps the live
+    # MFLEX pool around the requested global share-rate at today's worker count.
+    min_diff="${MININGCORE_MFLEX_MIN_DIFF:-32768}"
+    start_diff="${MININGCORE_MFLEX_START_DIFF:-131072}"
+    max_diff="${MININGCORE_MFLEX_MAX_DIFF:-4194304}"
+    vardiff_target_time="${MININGCORE_MFLEX_VARDIFF_TARGET_TIME:-43}"
+    vardiff_retarget_time="${MININGCORE_MFLEX_VARDIFF_RETARGET_TIME:-120}"
   else
     api_address="127.0.0.1"
     api_rate_disabled="true"
@@ -290,6 +297,8 @@ generate_miningcore_config() {
     min_diff=1
     start_diff=16
     max_diff=65536
+    vardiff_target_time="${MININGCORE_MFLEX_VARDIFF_TARGET_TIME:-15}"
+    vardiff_retarget_time="${MININGCORE_MFLEX_VARDIFF_RETARGET_TIME:-90}"
   fi
 
   backup_if_exists /etc/miningcore/config.json
@@ -345,8 +354,8 @@ pool['ports'] = {'${pool_port}': {
     'varDiff': {
         'minDiff': ${min_diff},
         'maxDiff': ${max_diff},
-        'targetTime': 15,
-        'retargetTime': 90,
+        'targetTime': ${vardiff_target_time},
+        'retargetTime': ${vardiff_retarget_time},
         'variancePercent': 30,
         'maxDelta': 200000,
     },
@@ -356,6 +365,8 @@ pool['daemons'] = [{
     'port': int(os.environ['MFLEX_RPC_PORT']),
     'user': os.environ['MFLEX_RPC_USER'],
     'password': os.environ['MFLEX_RPC_PASSWORD'],
+    'zmqBlockNotifySocket': f"tcp://127.0.0.1:{os.environ['MFLEX_ZMQ_BLOCK_PORT']}",
+    'zmqBlockNotifyTopic': 'hashblock',
 }]
 pool['paymentProcessing']['enabled'] = '${payment_enabled}' == 'true'
 # MFLEX is intended to run as a SOLO pool: the miner that finds the block
