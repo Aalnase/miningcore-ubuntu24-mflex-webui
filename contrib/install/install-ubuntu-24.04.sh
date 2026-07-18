@@ -247,7 +247,8 @@ generate_multiflex_conf() {
   local p2p_port="${MFLEX_P2P_PORT:-24200}"
   local zmq_block_port="${MFLEX_ZMQ_BLOCK_PORT:-26016}"
   local zmq_tx_port="${MFLEX_ZMQ_TX_PORT:-26017}"
-  export MFLEX_RPC_USER="$rpc_user" MFLEX_RPC_PASSWORD="$rpc_password" MFLEX_RPC_PORT="$rpc_port" MFLEX_P2P_PORT="$p2p_port" MFLEX_ZMQ_BLOCK_PORT="$zmq_block_port" MFLEX_ZMQ_TX_PORT="$zmq_tx_port"
+  local wallet_name="${MFLEX_POOL_WALLET_NAME:-poolwallet}"
+  export MFLEX_RPC_USER="$rpc_user" MFLEX_RPC_PASSWORD="$rpc_password" MFLEX_RPC_PORT="$rpc_port" MFLEX_P2P_PORT="$p2p_port" MFLEX_ZMQ_BLOCK_PORT="$zmq_block_port" MFLEX_ZMQ_TX_PORT="$zmq_tx_port" MFLEX_POOL_WALLET_NAME="$wallet_name"
 
   backup_if_exists /etc/multiflexcoin/multiflex.conf
   cat > /etc/multiflexcoin/multiflex.conf <<EOF
@@ -262,6 +263,7 @@ rpcuser=${rpc_user}
 rpcpassword=${rpc_password}
 zmqpubhashblock=tcp://127.0.0.1:${zmq_block_port}
 zmqpubhashtx=tcp://127.0.0.1:${zmq_tx_port}
+wallet=${wallet_name}
 
 # Home pools can keep pruning enabled to reduce disk usage. Public pools should
 # generally run archival/full nodes.
@@ -365,6 +367,7 @@ pool['daemons'] = [{
     'port': int(os.environ['MFLEX_RPC_PORT']),
     'user': os.environ['MFLEX_RPC_USER'],
     'password': os.environ['MFLEX_RPC_PASSWORD'],
+    'httpPath': f"/wallet/{os.environ.get('MFLEX_POOL_WALLET_NAME', 'poolwallet')}",
     'zmqBlockNotifySocket': f"tcp://127.0.0.1:{os.environ['MFLEX_ZMQ_BLOCK_PORT']}",
     'zmqBlockNotifyTopic': 'hashblock',
 }]
